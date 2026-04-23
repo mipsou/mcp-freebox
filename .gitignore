@@ -1,0 +1,6 @@
+/freebox-mcp
+/freebox-pair
+*.exe
+*.test
+*.out
+/dist/
