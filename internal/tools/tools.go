@@ -26,12 +26,14 @@ type writer interface {
 }
 
 // RegisterAll wires every tool into the MCP server.
-func RegisterAll(s *server.MCPServer, c writer) {
+func RegisterAll(s *server.MCPServer, c writer, d discoverer) {
+	registerDiscovery(s, d)
 	registerConnection(s, c)
 	registerLAN(s, c)
 	registerDHCP(s, c)
 	registerNAT(s, c)
 	registerWifi(s, c)
-	// P2 — VM, Switch, TFTP, VPN, Storage, Netshare
-	// P3 — System, Downloads, FS, Calls, Parental, FTP, AirMedia, LCD
+	registerStorage(s, c)
+	registerVM(s, c)
+	// P3 — Switch, TFTP, VPN, Netshare, System, Downloads, Calls, Parental
 }

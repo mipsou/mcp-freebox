@@ -47,7 +47,7 @@ func newTestClient(t *testing.T, path string, payload any) (*Client, *httptest.S
 	}))
 
 	mgr := auth.New(srv.URL+"/api/v4", "test-app", "test-token", srv.Client())
-	c := New(srv.URL+"/api/v4", mgr, srv.Client())
+	c := New(srv.URL+"/api/v4", srv.URL+"/api_version", mgr, srv.Client())
 	return c, srv
 }
 
@@ -89,7 +89,7 @@ func TestAPIError(t *testing.T) {
 	defer srv.Close()
 
 	mgr := auth.New(srv.URL+"/api/v4", "test-app", "test-token", srv.Client())
-	c := New(srv.URL+"/api/v4", mgr, srv.Client())
+	c := New(srv.URL+"/api/v4", srv.URL+"/api_version", mgr, srv.Client())
 
 	var dst any
 	err := c.Get(context.Background(), "/protected/", &dst)

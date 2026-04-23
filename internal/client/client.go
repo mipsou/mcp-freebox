@@ -20,13 +20,14 @@ import (
 
 // Client wraps authenticated HTTP calls to the Freebox OS API.
 type Client struct {
-	baseURL string
-	auth    *auth.Manager
-	http    *http.Client
+	baseURL      string
+	discoverURL  string
+	auth         *auth.Manager
+	http         *http.Client
 }
 
-func New(baseURL string, auth *auth.Manager, http *http.Client) *Client {
-	return &Client{baseURL: baseURL, auth: auth, http: http}
+func New(baseURL, discoverURL string, auth *auth.Manager, http *http.Client) *Client {
+	return &Client{baseURL: baseURL, discoverURL: discoverURL, auth: auth, http: http}
 }
 
 // Get performs an authenticated GET and decodes result into dst.
@@ -47,6 +48,25 @@ func (c *Client) Put(ctx context.Context, path string, body any, dst any) error 
 // Delete performs an authenticated DELETE.
 func (c *Client) Delete(ctx context.Context, path string) error {
 	return c.do(ctx, http.MethodDelete, path, nil, nil)
+}
+
+// DiscoverAPI performs an unauthenticated GET to the discovery endpoint and
+// decodes the raw JSON response into dst (no Freebox envelope).
+func (c *Client) DiscoverAPI(ctx context.Context, dst any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.discoverURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, dst)
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body, dst any) error {

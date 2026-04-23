@@ -11,6 +11,25 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.3.0] - 2026-04-23
+
+### Ajouté
+- **Découverte** : outil `freebox_discover` — identifie la Freebox sur le réseau local sans IP connue (mDNS via `mafreebox.freebox.fr`, non authentifié)
+- **Stockage** : outil `freebox_storage_disks` — liste les disques connectés (état, taille, connecteur)
+- **Stockage** : outil `freebox_storage_partitions` — liste les partitions (fstype, montage, espace libre)
+- **VM** : outil `freebox_vm_list` — inventaire des VMs (nom, état, mémoire, vCPUs, OS)
+- **VM** : outil `freebox_vm_start` — démarre une VM arrêtée (PRA : remontée de service)
+- **VM** : outil `freebox_vm_kill` — force l'arrêt d'une VM bloquée
+- `client.DiscoverAPI()` — requête HTTP non authentifiée vers `/api_version` (pas d'enveloppe Freebox)
+- `config.DiscoveryURL()` — URL de découverte `http://{host}/api_version`
+- Permission **"Contrôle de la VM"** marquée `usedByMCP: true` dans `freebox-pair` (re-pairing requis)
+
+### Modifié
+- `client.New()` — nouveau paramètre `discoverURL`
+- `tools.RegisterAll()` — nouveau paramètre `discoverer`
+
+---
+
 ## [0.2.0] - 2026-04-23
 
 ### Ajouté
