@@ -90,6 +90,12 @@ Dans `claude_desktop_config.json` :
 | `freebox_connection_xdsl`    | SNR, atténuation, FEC/CRC, uptime xDSL                  |
 | `freebox_dyndns_list`        | Entrées DynDNS configurées et leur état                  |
 
+### Découverte
+
+| Outil                  | Description                                                       |
+|------------------------|-------------------------------------------------------------------|
+| `freebox_discover`     | Découvre la Freebox sans IP (mDNS) — modèle, version API, port HTTPS |
+
 ### LAN
 
 | Outil                  | Description                                                  |
@@ -108,6 +114,21 @@ Dans `claude_desktop_config.json` :
 | Outil                  | Description                                                  |
 |------------------------|--------------------------------------------------------------|
 | `freebox_nat_rules`    | Règles de redirection de ports NAT                           |
+
+### Stockage
+
+| Outil                        | Description                                                    |
+|------------------------------|----------------------------------------------------------------|
+| `freebox_storage_disks`      | Disques connectés : type, état, taille, connecteur             |
+| `freebox_storage_partitions` | Partitions : fstype, état de montage, espace libre/utilisé     |
+
+### VM
+
+| Outil                  | Description                                                       |
+|------------------------|-------------------------------------------------------------------|
+| `freebox_vm_list`      | Inventaire des VMs : nom, état, mémoire, vCPUs, OS               |
+| `freebox_vm_start`     | Démarre une VM arrêtée (PRA — remontée de service)               |
+| `freebox_vm_kill`      | Force l'arrêt d'une VM bloquée                                   |
 
 ### WiFi
 

@@ -47,12 +47,12 @@ func main() {
 	}
 
 	mgr := auth.New(cfg.BaseURL(), cfg.AppID, appToken, httpClient)
-	c := client.New(cfg.BaseURL(), mgr, httpClient)
+	c := client.New(cfg.BaseURL(), cfg.DiscoveryURL(), mgr, httpClient)
 
 	s := server.NewMCPServer("freebox-mcp", version,
 		server.WithToolCapabilities(false),
 	)
-	tools.RegisterAll(s, c)
+	tools.RegisterAll(s, c, c)
 
 	fmt.Fprintf(os.Stderr, "freebox-mcp: starting (host=%s, version=%s)\n",
 		cfg.Host, version)

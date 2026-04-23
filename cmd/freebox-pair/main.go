@@ -41,7 +41,7 @@ var freeboxPermissions = []permission{
 	{"Accès au journal d'appels", "Lecture", false, "Historique des appels"},
 	{"Accès au guide TV", "Lecture", false, "Programme télévisé"},
 	{"Programmation des enregistrements", "Lecture/Écriture", false, "Enregistrements TV"},
-	{"Contrôle de la VM", "Contrôle", false, "Démarrage/arrêt machines virtuelles"},
+	{"Contrôle de la VM", "Contrôle", true, "Démarrage/arrêt machines virtuelles (PRA)"},
 	{"Accès au gestionnaire de téléchargements", "Lecture/Écriture", false, "Ajout/suppression de téléchargements"},
 }
 
