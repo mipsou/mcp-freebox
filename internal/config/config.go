@@ -40,6 +40,11 @@ func (c *Config) BaseURL() string {
 	return "https://" + c.Host + "/api/v4"
 }
 
+// DiscoveryURL returns the unauthenticated API version endpoint (HTTP, no /api/v4 prefix).
+func (c *Config) DiscoveryURL() string {
+	return "http://" + c.Host + "/api_version"
+}
+
 func env(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
