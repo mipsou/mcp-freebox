@@ -88,12 +88,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Fprintln(os.Stderr, "\nfreebox-pair: SUCCESS")
-	fmt.Fprintln(os.Stderr, "─────────────────────────────────────────────────────────")
-	fmt.Fprintln(os.Stderr, "IMPORTANT : restreindre les droits inutiles dans :")
-	fmt.Fprintln(os.Stderr, "  Freebox OS → Paramètres → Gestion des accès → Applications")
-	fmt.Fprintln(os.Stderr, "  Seule la permission « Connexion » est nécessaire pour v0.1")
-	fmt.Fprintln(os.Stderr, "─────────────────────────────────────────────────────────")
+	fmt.Fprintln(os.Stderr, "\nfreebox-pair: SUCCESS — token ci-dessous (stdout)")
 
 	// app_token sur stdout pour piping vers un secret store.
 	fmt.Println(appToken)
@@ -106,20 +101,27 @@ func printPermissions() {
 	fmt.Fprintln(os.Stderr, "═══════════════════════════════════════════════════════════")
 	fmt.Fprintln(os.Stderr, "")
 
+	fmt.Fprintln(os.Stderr, "  NÉCESSAIRES pour freebox-mcp v0.1 :")
 	for _, p := range freeboxPermissions {
-		used := "    "
 		if p.usedByMCP {
-			used = "[✓] "
+			fmt.Fprintf(os.Stderr, "    [✓] %-42s  %-22s  %s\n", p.name, p.access, p.desc)
 		}
-		fmt.Fprintf(os.Stderr, "  %s%-42s  %-22s  %s\n", used, p.name, p.access, p.desc)
 	}
 
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "  [✓] = utilisé par freebox-mcp v0.1")
+	fmt.Fprintln(os.Stderr, "  ACCORDÉES PAR DÉFAUT (non nécessaires pour v0.1) :")
+	for _, p := range freeboxPermissions {
+		if !p.usedByMCP {
+			fmt.Fprintf(os.Stderr, "    [ ] %-42s  %-22s  %s\n", p.name, p.access, p.desc)
+		}
+	}
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "  La Freebox accorde ces droits par défaut. Vous pouvez")
-	fmt.Fprintln(os.Stderr, "  restreindre les droits non nécessaires après le pairing")
-	fmt.Fprintln(os.Stderr, "  dans : Freebox OS → Paramètres → Gestion des accès")
+	fmt.Fprintln(os.Stderr, "─────────────────────────────────────────────────────────")
+	fmt.Fprintln(os.Stderr, "  ACTION REQUISE APRÈS LE PAIRING :")
+	fmt.Fprintln(os.Stderr, "  La Freebox accorde TOUS ces droits par défaut.")
+	fmt.Fprintln(os.Stderr, "  Vous devrez décocher les droits non marqués [✓] dans :")
+	fmt.Fprintln(os.Stderr, "  Freebox OS → Paramètres → Gestion des accès → Applications")
+	fmt.Fprintln(os.Stderr, "─────────────────────────────────────────────────────────")
 	fmt.Fprintln(os.Stderr, "")
 }
 
