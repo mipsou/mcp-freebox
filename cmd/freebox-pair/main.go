@@ -123,13 +123,14 @@ func printPermissions() {
 	fmt.Fprintln(os.Stderr, "")
 }
 
+var stdinScanner = bufio.NewScanner(os.Stdin)
+
 func confirm(prompt string) bool {
 	fmt.Fprintf(os.Stderr, "  → %s [y/N] : ", prompt)
-	scanner := bufio.NewScanner(os.Stdin)
-	if !scanner.Scan() {
+	if !stdinScanner.Scan() {
 		return false
 	}
-	return strings.ToLower(strings.TrimSpace(scanner.Text())) == "y"
+	return strings.ToLower(strings.TrimSpace(stdinScanner.Text())) == "y"
 }
 
 type authorizeRequest struct {
