@@ -52,37 +52,76 @@ func callTool(t *testing.T, s *server.MCPServer, name string) *mcp.CallToolResul
 	return result
 }
 
-func TestConnectionStatus_OK(t *testing.T) {
-	mock := mockGetter{
-		"/connection/": ConnectionStatus{
-			State: "up",
-			Type:  "ethernet",
-			IPv4:  "1.2.3.4",
-		},
-	}
-
+func newServer(t *testing.T, mock mockGetter) *server.MCPServer {
+	t.Helper()
 	s := server.NewMCPServer("test", "0.0.0")
 	registerConnection(s, mock)
+	return s
+}
 
+func TestConnectionStatus_OK(t *testing.T) {
+	s := newServer(t, mockGetter{
+		"/connection/": ConnectionStatus{State: "up", Type: "ethernet", IPv4: "1.2.3.4"},
+	})
 	result := callTool(t, s, "freebox_connection_status")
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
 	}
-
-	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, `"ipv4": "1.2.3.4"`) {
-		t.Errorf("unexpected result: %s", text)
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"ipv4": "1.2.3.4"`) {
+		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
 	}
 }
 
 func TestConnectionStatus_APIError(t *testing.T) {
-	mock := mockGetter{} // empty — will return notFoundErr
-
-	s := server.NewMCPServer("test", "0.0.0")
-	registerConnection(s, mock)
-
+	s := newServer(t, mockGetter{})
 	result := callTool(t, s, "freebox_connection_status")
 	if !result.IsError {
 		t.Error("expected tool error result")
+	}
+}
+
+func TestConnectionXdsl_OK(t *testing.T) {
+	s := newServer(t, mockGetter{
+		"/connection/xdsl/": XdslStatus{
+			Status: struct {
+				Status     string `json:"status"`
+				Modulation string `json:"modulation"`
+				Uptime     int    `json:"uptime"`
+			}{Status: "showtime", Modulation: "VDSL2", Uptime: 3600},
+			Down: XdslLine{SNR: 120, Attn: 100},
+		},
+	})
+	result := callTool(t, s, "freebox_connection_xdsl")
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"status": "showtime"`) {
+		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+}
+
+func TestConnectionFtth_OK(t *testing.T) {
+	s := newServer(t, mockGetter{
+		"/connection/ftth/": FtthStatus{SfpPresent: true, Link: true, SfpPwrRx: -1924},
+	})
+	result := callTool(t, s, "freebox_connection_ftth")
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"sfp_present": true`) {
+		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+}
+
+func TestDynDNSList_OK(t *testing.T) {
+	s := newServer(t, mockGetter{
+		"/dynDns/": []DynDNSEntry{{Enabled: true, Hostname: "home.example.com", State: "ok"}},
+	})
+	result := callTool(t, s, "freebox_dyndns_list")
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"hostname": "home.example.com"`) {
+		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
 	}
 }
