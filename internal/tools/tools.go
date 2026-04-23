@@ -28,7 +28,10 @@ type writer interface {
 // RegisterAll wires every tool into the MCP server.
 func RegisterAll(s *server.MCPServer, c writer) {
 	registerConnection(s, c)
-	// P1 — LAN, VM, Switch (to be added)
-	// P2 — DHCP, TFTP, Firewall, WiFi, VPN, Storage, Netshare
+	registerLAN(s, c)
+	registerDHCP(s, c)
+	registerNAT(s, c)
+	registerWifi(s, c)
+	// P2 — VM, Switch, TFTP, VPN, Storage, Netshare
 	// P3 — System, Downloads, FS, Calls, Parental, FTP, AirMedia, LCD
 }

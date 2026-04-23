@@ -90,6 +90,32 @@ Dans `claude_desktop_config.json` :
 | `freebox_connection_xdsl`    | SNR, atténuation, FEC/CRC, uptime xDSL                  |
 | `freebox_dyndns_list`        | Entrées DynDNS configurées et leur état                  |
 
+### LAN
+
+| Outil                  | Description                                                  |
+|------------------------|--------------------------------------------------------------|
+| `freebox_lan_hosts`    | Équipements du réseau local : nom, MAC, IP, accessibilité    |
+
+### DHCP
+
+| Outil                  | Description                                                  |
+|------------------------|--------------------------------------------------------------|
+| `freebox_dhcp_static`  | Réservations DHCP statiques (MAC → IP fixe)                  |
+| `freebox_dhcp_leases`  | Baux DHCP dynamiques actifs (clients connectés)              |
+
+### NAT / Port forwarding
+
+| Outil                  | Description                                                  |
+|------------------------|--------------------------------------------------------------|
+| `freebox_nat_rules`    | Règles de redirection de ports NAT                           |
+
+### WiFi
+
+| Outil                  | Description                                                  |
+|------------------------|--------------------------------------------------------------|
+| `freebox_wifi_aps`     | Points d'accès WiFi : bande, canal, état, DFS                |
+| `freebox_wifi_config`  | Configuration WiFi globale (activé, filtre MAC)              |
+
 ## Licence
 
 [EUPL-1.2](LICENSE) — European Union Public Licence v1.2
