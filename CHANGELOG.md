@@ -11,6 +11,25 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.7.1] - 2026-04-24
+
+### Correctif
+
+- **Démarrage non-bloquant** : le serveur MCP démarre immédiatement même si le token est absent ou révoqué — l'auto-pairing tourne en goroutine, les outils retournent un message clair et deviennent opérationnels dès l'approbation Freebox OS, sans redémarrage
+
+---
+
+## [0.7.0] - 2026-04-24
+
+### Ajouté
+
+- **VPN Serveur** : `freebox_vpn_server_status` — état des 5 protocoles (PPTP, OpenVPN Routé/Bridgé, IPsec IKEv2, WireGuard) avec nombre de connexions actives
+- **VPN Serveur** : `freebox_vpn_connections` — clients VPN actuellement connectés (login, IP source, IP tunnel, routes poussées)
+- **VPN Client** : `freebox_vpn_client_configs` — configurations VPN sortant vers un serveur externe
+- Permission **"Gestion du VPN"** dans `freebox-pair` — re-pairing requis pour activer les outils VPN
+
+---
+
 ## [0.6.0] - 2026-04-24
 
 ### Ajouté
