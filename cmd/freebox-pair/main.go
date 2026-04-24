@@ -35,7 +35,7 @@ type permission struct {
 // usedByMCP = true si un outil MCP existant l'utilise.
 var freeboxPermissions = []permission{
 	{"Connexion (WAN, débits, xDSL, FTTH)", "Lecture", true, "État ligne, IPs publiques, DynDNS"},
-	{"Modification des réglages de la Freebox", "Lecture/Écriture", false, "Paramètres système, réseau, WiFi"},
+	{"Modification des réglages de la Freebox", "Lecture/Écriture", true, "Système (uptime, firmware, temp), switch LAN"},
 	{"Accès aux fichiers de la Freebox", "Lecture/Écriture", false, "NAS, stockage interne"},
 	{"Accès à la base de contacts", "Lecture/Écriture", false, "Répertoire téléphonique"},
 	{"Accès au journal d'appels", "Lecture", false, "Historique des appels"},
@@ -101,7 +101,7 @@ func printPermissions() {
 	fmt.Fprintln(os.Stderr, "═══════════════════════════════════════════════════════════")
 	fmt.Fprintln(os.Stderr, "")
 
-	fmt.Fprintln(os.Stderr, "  NÉCESSAIRES pour freebox-mcp v0.1 :")
+	fmt.Fprintln(os.Stderr, "  NÉCESSAIRES pour freebox-mcp v0.4 :")
 	for _, p := range freeboxPermissions {
 		if p.usedByMCP {
 			fmt.Fprintf(os.Stderr, "    [✓] %-42s  %-22s  %s\n", p.name, p.access, p.desc)
@@ -109,7 +109,7 @@ func printPermissions() {
 	}
 
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "  ACCORDÉES PAR DÉFAUT (non nécessaires pour v0.1) :")
+	fmt.Fprintln(os.Stderr, "  ACCORDÉES PAR DÉFAUT (non nécessaires pour v0.4) :")
 	for _, p := range freeboxPermissions {
 		if !p.usedByMCP {
 			fmt.Fprintf(os.Stderr, "    [ ] %-42s  %-22s  %s\n", p.name, p.access, p.desc)
