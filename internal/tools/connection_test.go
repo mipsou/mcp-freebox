@@ -36,20 +36,10 @@ type notFoundErr struct{ path string }
 
 func (e *notFoundErr) Error() string { return "not found: " + e.path }
 
-// callTool invokes a registered tool by name using its Handler directly.
+// callTool invokes a registered tool by name with no arguments.
 func callTool(t *testing.T, s *server.MCPServer, name string) *mcp.CallToolResult {
 	t.Helper()
-	st := s.GetTool(name)
-	if st == nil {
-		t.Fatalf("tool %q not registered", name)
-	}
-	req := mcp.CallToolRequest{}
-	req.Params.Name = name
-	result, err := st.Handler(context.Background(), req)
-	if err != nil {
-		t.Fatalf("handler error: %v", err)
-	}
-	return result
+	return callToolWithArgs(t, s, name, nil)
 }
 
 func newServer(t *testing.T, mock mockGetter) *server.MCPServer {
