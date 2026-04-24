@@ -47,7 +47,7 @@ func TestStorageDisks_APIError(t *testing.T) {
 func TestStoragePartitions_OK(t *testing.T) {
 	s := newStorageServer(t, mockGetter{
 		"/storage/partition/": []StoragePartition{
-			{ID: "sda1", DiskID: "sda", Fstype: "ext4", State: "mounted", Path: "/mnt/data", FreeBytes: 500000000000},
+			{ID: 1, DiskID: "sda", Fstype: "ext4", State: "mounted", Path: "/mnt/data", FreeBytes: 500000000000},
 		},
 	})
 	result := callTool(t, s, "freebox_storage_partitions")
