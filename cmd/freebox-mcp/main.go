@@ -9,9 +9,11 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/mark3labs/mcp-go/server"
 
@@ -19,10 +21,18 @@ import (
 	"github.com/mipsou/mcp-freebox/internal/client"
 	"github.com/mipsou/mcp-freebox/internal/config"
 	"github.com/mipsou/mcp-freebox/internal/mdns"
+	"github.com/mipsou/mcp-freebox/internal/pair"
 	"github.com/mipsou/mcp-freebox/internal/tools"
+	"github.com/mipsou/mcp-freebox/internal/wincred"
 )
 
 var version = "dev"
+
+const (
+	credTarget  = "freebox-mcp"
+	credUser    = "app"
+	pairTimeout = 3 * time.Minute
+)
 
 func main() {
 	cfg, err := config.Load()
@@ -46,13 +56,6 @@ func main() {
 		}
 	}
 
-	appToken, err := loadAppToken()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "freebox-mcp: token error: %v\n", err)
-		fmt.Fprintf(os.Stderr, "freebox-mcp: run freebox-pair first to register this app\n")
-		os.Exit(1)
-	}
-
 	// Freebox uses a self-signed cert on mafreebox.freebox.fr;
 	// InsecureSkipVerify is intentional and documented.
 	//nolint:gosec
@@ -61,6 +64,12 @@ func main() {
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
+	}
+
+	appToken, err := acquireToken(cfg, httpClient)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "freebox-mcp: impossible d'obtenir un token: %v\n", err)
+		os.Exit(1)
 	}
 
 	mgr := auth.New(cfg.BaseURL(), cfg.AppID, appToken, httpClient)
@@ -75,17 +84,93 @@ func main() {
 		cfg.Host, version)
 
 	if err := server.ServeStdio(s); err != nil {
+		// Detect token revocation during session: re-pair next launch.
+		if errors.Is(err, auth.ErrTokenRevoked) {
+			fmt.Fprintln(os.Stderr, "freebox-mcp: token révoqué — suppression du credential, re-pair au prochain démarrage")
+			_ = wincred.Delete(credTarget)
+		}
 		fmt.Fprintf(os.Stderr, "freebox-mcp: server error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-// loadAppToken reads the app token from the FREEBOX_APP_TOKEN env var.
-// Production: replace with Windows Credential Manager (wincred) lookup.
-func loadAppToken() (string, error) {
-	tok := os.Getenv("FREEBOX_APP_TOKEN")
-	if tok == "" {
-		return "", fmt.Errorf("FREEBOX_APP_TOKEN not set")
+// acquireToken returns a valid app token using this priority:
+//  1. Windows Credential Manager (wincred) — persistent across launches
+//  2. FREEBOX_APP_TOKEN env var — fallback / CI / override
+//  3. Auto-pairing — first-run or after revocation
+//
+// After a successful auto-pair, the token is saved to wincred for future launches.
+func acquireToken(cfg *config.Config, httpClient *http.Client) (string, error) {
+	// 1. Credential Manager — with eager validation.
+	if tok, err := wincred.Read(credTarget); err == nil && tok != "" {
+		if verr := validateToken(cfg, httpClient, tok); verr == nil {
+			fmt.Fprintln(os.Stderr, "freebox-mcp: token valide — démarrage normal")
+			return tok, nil
+		} else if errors.Is(verr, auth.ErrTokenRevoked) {
+			fmt.Fprintln(os.Stderr, "freebox-mcp: token révoqué côté Freebox — suppression et re-pair")
+			_ = wincred.Delete(credTarget)
+			// Fall through to auto-pair.
+		} else {
+			// Network error etc. — return token anyway and let the session retry later.
+			fmt.Fprintf(os.Stderr, "freebox-mcp: validation token impossible (%v) — démarrage avec token existant\n", verr)
+			return tok, nil
+		}
 	}
-	return tok, nil
+
+	// 2. Env var (override / CI) — no validation, trusted source.
+	if tok := os.Getenv("FREEBOX_APP_TOKEN"); tok != "" {
+		fmt.Fprintln(os.Stderr, "freebox-mcp: token chargé depuis FREEBOX_APP_TOKEN")
+		return tok, nil
+	}
+
+	// 3. Auto-pairing — first launch or after revocation
+	return autoPair(cfg, httpClient)
+}
+
+// validateToken does a lightweight auth check (open + close session) to confirm
+// the app token is still accepted by the Freebox. Returns ErrTokenRevoked if
+// the Freebox rejects the token (revoked / pending), or another error on failure.
+func validateToken(cfg *config.Config, httpClient *http.Client, tok string) error {
+	mgr := auth.New(cfg.BaseURL(), cfg.AppID, tok, httpClient)
+	_, err := mgr.Token()
+	return err
+}
+
+// autoPair sends a pairing request and waits for the user to approve it
+// in the Freebox OS web interface (Paramètres → Gestion des accès → Applications).
+func autoPair(cfg *config.Config, httpClient *http.Client) (string, error) {
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "freebox-mcp: aucun token trouvé — appairage automatique")
+	fmt.Fprintln(os.Stderr, "freebox-mcp: envoi de la demande d'autorisation...")
+
+	req, err := pair.Start(cfg, httpClient)
+	if err != nil {
+		return "", fmt.Errorf("auto-pair: %w", err)
+	}
+
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "  ╔══════════════════════════════════════════════════════════╗")
+	fmt.Fprintln(os.Stderr, "  ║  ACTION REQUISE — Freebox OS                             ║")
+	fmt.Fprintln(os.Stderr, "  ║                                                          ║")
+	fmt.Fprintln(os.Stderr, "  ║  Allez sur votre Freebox :                               ║")
+	fmt.Fprintln(os.Stderr, "  ║  Paramètres → Gestion des accès → Applications           ║")
+	fmt.Fprintln(os.Stderr, "  ║  puis acceptez la demande  « MCP Freebox »               ║")
+	fmt.Fprintln(os.Stderr, "  ║                                                          ║")
+	fmt.Fprintf(os.Stderr,  "  ║  Vous avez %.0f secondes.                                  ║\n", pairTimeout.Seconds())
+	fmt.Fprintln(os.Stderr, "  ╚══════════════════════════════════════════════════════════╝")
+	fmt.Fprintln(os.Stderr, "")
+
+	appToken, err := pair.WaitForGrant(cfg, httpClient, req, pairTimeout)
+	if err != nil {
+		return "", fmt.Errorf("auto-pair: %w", err)
+	}
+
+	// Persist for future launches.
+	if werr := wincred.Write(credTarget, credUser, appToken); werr != nil {
+		fmt.Fprintf(os.Stderr, "freebox-mcp: avertissement — sauvegarde wincred échouée (%v)\n", werr)
+	} else {
+		fmt.Fprintln(os.Stderr, "freebox-mcp: appairage réussi — token sauvegardé dans Credential Manager")
+	}
+
+	return appToken, nil
 }
