@@ -11,6 +11,38 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.5.0] - 2026-04-24
+
+### Ajouté
+- **Auto-pairing au premier démarrage** : `freebox-mcp` initie automatiquement l'appairage si aucun token n'est trouvé — message clair dans les logs (`Freebox OS → Gestion des accès → Applications`)
+- **`internal/wincred`** : lecture/écriture Windows Credential Manager via `advapi32.dll` (native, sans module PowerShell externe)
+- **`internal/pair`** : logique d'appairage extraite en package réutilisable (`Start`, `WaitForGrant`)
+- **Détection de révocation** : `error_code: invalid_token / pending_token` → wincred effacé → re-pair automatique au prochain démarrage
+- **Validation eagère du token** au démarrage — vérifie la validité avant d'accepter le token wincred
+
+### Modifié
+- `cmd/freebox-mcp/main.go` : `loadAppToken()` remplacé par `acquireToken()` — cascade wincred → env var → auto-pair
+- `internal/auth` : `ErrTokenRevoked` sentinelle sur `error_code: invalid_token / pending_token`
+
+---
+
+## [0.4.1] - 2026-04-24
+
+### Ajouté
+- **Scripts PowerShell** : `pair-and-save.ps1` — build + pairing interactif + sauvegarde token via `cmdkey`
+- **Scripts PowerShell** : `load-token.ps1` — chargement du token depuis Credential Manager
+
+### Modifié
+- **mDNS** : découverte automatique de la Freebox sur le LAN — zéro config, zéro IP hardcodée ; fallback `mafreebox.freebox.fr` si timeout
+- `freebox-pair` : correction label version, ajout droit "Modification des réglages" nécessaire pour `system`/`switch`
+
+### Corrigé
+- Scripts : suppression IP LAN privée hardcodée dans `pair-and-save.ps1`
+- Scripts : `ErrorActionPreference Continue` autour de `freebox-pair.exe` (faux positifs stderr Go)
+- mDNS : remplacement `grandcat/zeroconf` par implémentation directe (audit sécurité Dependabot)
+
+---
+
 ## [0.4.0] - 2026-04-24
 
 ### Ajouté
@@ -70,7 +102,9 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/mipsou/mcp-freebox/compare/v0.4.1...v0.5.0
+[0.4.1]: https://github.com/mipsou/mcp-freebox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/mipsou/mcp-freebox/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mipsou/mcp-freebox/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mipsou/mcp-freebox/compare/v0.1.0...v0.2.0
