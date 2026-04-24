@@ -17,6 +17,7 @@
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+# Note: désactivé autour de freebox-pair.exe (stderr natif Go → ErrorRecord PS)
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
@@ -38,9 +39,11 @@ $env:FREEBOX_APP_ID    = "mcp-freebox"
 $env:FREEBOX_APP_TOKEN = ""
 # FREEBOX_HOST non défini → défaut mafreebox.freebox.fr (voir config.go DefaultHost)
 
-# Exécution native — stdin/stdout/stderr passent directement au terminal
+# Exécution native — désactiver Stop pour que stderr Go ne soit pas traité comme erreur PS
+$ErrorActionPreference = "Continue"
 & "$projectRoot\freebox-pair.exe"
 $exitCode = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
 
 if ($exitCode -ne 0) {
     throw "freebox-pair a échoué (exit $exitCode)."
