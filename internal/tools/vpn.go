@@ -14,17 +14,21 @@ import (
 )
 
 // VPNServer reflects one entry from GET /api/v4/vpn/
-// vpn_type : pptp | openvpn_routed | openvpn_bridged | ipsec | wireguard
+// type  : pptp | openvpn | ipsec | wireguard
+// name  : pptp | openvpn_routed | openvpn_bridge | ipsec | wireguard
+// state : started | stopped
 type VPNServer struct {
-	VPNType       string `json:"vpn_type"`
-	Enabled       bool   `json:"enabled"`
-	ActiveClients int    `json:"active_clients,omitempty"`
+	Type                string `json:"type"`
+	Name                string `json:"name"`
+	State               string `json:"state"`
+	ConnectionCount     int    `json:"connection_count"`
+	AuthConnectionCount int    `json:"auth_connection_count"`
 }
 
 // VPNConnection reflects one entry from GET /api/v4/vpn/connection/
 type VPNConnection struct {
 	ID           string   `json:"id"`
-	VPN          string   `json:"vpn"`           // vpn_type du serveur
+	VPN          string   `json:"vpn"`           // nom du serveur (ex: wireguard)
 	Login        string   `json:"login"`         // utilisateur connecté
 	SrcIP        string   `json:"src_ip"`        // IP publique du client
 	LocalIP      string   `json:"local_ip"`      // IP tunnel assignée

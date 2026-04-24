@@ -24,15 +24,15 @@ func newVPNServer(t *testing.T, mock mockGetter) *server.MCPServer {
 func TestVPNServerStatus_OK(t *testing.T) {
 	s := newVPNServer(t, mockGetter{
 		"/vpn/": []VPNServer{
-			{VPNType: "pptp", Enabled: false},
-			{VPNType: "wireguard", Enabled: true, ActiveClients: 0},
+			{Type: "pptp", Name: "pptp", State: "stopped"},
+			{Type: "wireguard", Name: "wireguard", State: "started", ConnectionCount: 0},
 		},
 	})
 	result := callTool(t, s, "freebox_vpn_server_status")
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
 	}
-	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"vpn_type": "wireguard"`) {
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"name": "wireguard"`) {
 		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
 	}
 }
