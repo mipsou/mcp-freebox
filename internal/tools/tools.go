@@ -35,5 +35,7 @@ func RegisterAll(s *server.MCPServer, c writer, d discoverer) {
 	registerWifi(s, c)
 	registerStorage(s, c)
 	registerVM(s, c)
-	// P3 — Switch, TFTP, VPN, Netshare, System, Downloads, Calls, Parental
+	registerSystem(s, c)
+	registerSwitch(s, c)
+	// P5 — VPN, Netshare, Downloads, Calls, Parental
 }
