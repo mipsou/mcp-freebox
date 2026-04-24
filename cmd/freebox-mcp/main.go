@@ -31,19 +31,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Découverte mDNS si FREEBOX_HOST non défini.
+	// Découverte mDNS si FREEBOX_HOST non défini — fallback mafreebox.freebox.fr.
 	if os.Getenv("FREEBOX_HOST") == "" {
-		fmt.Fprintln(os.Stderr, "freebox-mcp: FREEBOX_HOST non défini — découverte mDNS...")
+		fmt.Fprintln(os.Stderr, "freebox-mcp: découverte mDNS...")
 		discovered, err := mdns.Discover(context.Background())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "freebox-mcp: mDNS: %v\n", err)
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, "freebox-mcp: mDNS indisponible (%v) — fallback %s\n", err, cfg.Host)
+		} else {
+			cfg.Host = discovered.Host
+			if discovered.HTTPSPort != 0 && discovered.HTTPSPort != 443 {
+				cfg.Host = fmt.Sprintf("%s:%d", discovered.Host, discovered.HTTPSPort)
+			}
+			fmt.Fprintf(os.Stderr, "freebox-mcp: Freebox trouvée → %s\n", cfg.Host)
 		}
-		cfg.Host = discovered.Host
-		if discovered.HTTPSPort != 0 && discovered.HTTPSPort != 443 {
-			cfg.Host = fmt.Sprintf("%s:%d", discovered.Host, discovered.HTTPSPort)
-		}
-		fmt.Fprintf(os.Stderr, "freebox-mcp: Freebox trouvée → %s\n", cfg.Host)
 	}
 
 	appToken, err := loadAppToken()
