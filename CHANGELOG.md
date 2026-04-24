@@ -11,6 +11,24 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.9.0] - 2026-04-25
+
+### Ajouté
+
+- **Netshare** : `freebox_samba_config` — état et configuration du serveur Samba (workgroup, logon, imprimante)
+- **Netshare** : `freebox_samba_shares` — liste des partages Samba (nom, chemin, lecture seule)
+- **Netshare** : `freebox_afp_config` — état du serveur AFP (Apple Filing Protocol)
+- **Downloads** : `freebox_downloads` — liste des téléchargements (HTTP, BitTorrent, NZB) avec statut et progression
+- **Downloads** : `freebox_download_add` — ajout d'un téléchargement par URL ou lien magnet
+- **Downloads** : `freebox_download_toggle` — pause ou reprise d'un téléchargement
+- **Downloads** : `freebox_download_delete` — suppression d'un téléchargement de la liste
+- **Calls** : `freebox_call_log` — journal des appels téléphoniques (entrants, manqués, sortants)
+- **Parental** : `freebox_parental_config` — configuration globale du contrôle parental (activé, politique par défaut)
+- **Parental** : `freebox_parental_planning` — plages horaires de restriction par jour
+- **Parental** : `freebox_parental_filters` — appareils soumis au contrôle parental (filtre MAC)
+
+---
+
 ## [0.8.0] - 2026-04-25
 
 ### Ajouté
@@ -166,7 +184,8 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/mipsou/mcp-freebox/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/mipsou/mcp-freebox/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/mipsou/mcp-freebox/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/mipsou/mcp-freebox/compare/v0.6.0...v0.7.0
