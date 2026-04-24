@@ -11,6 +11,16 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.4.0] - 2026-04-24
+
+### Ajouté
+- **Système** : outil `freebox_system` — uptime, version firmware, board name, températures (CPU, switch), vitesse ventilateurs
+- **Switch** : outil `freebox_switch_ports` — état de chaque port LAN (lien, vitesse Mbps, duplex, équipements connectés avec MAC + hostname)
+- Types Go structurés : `SystemInfo`, `SystemSensor`, `SystemFan`, `SwitchPortStatus`, `SwitchMacEntry`
+- Tests unitaires OK/APIError pour les deux nouveaux outils
+
+---
+
 ## [0.3.0] - 2026-04-23
 
 ### Ajouté
@@ -60,6 +70,8 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/mipsou/mcp-freebox/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/mipsou/mcp-freebox/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mipsou/mcp-freebox/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mipsou/mcp-freebox/releases/tag/v0.1.0

@@ -137,6 +137,18 @@ Dans `claude_desktop_config.json` :
 | `freebox_wifi_aps`     | Points d'accès WiFi : bande, canal, état, DFS                |
 | `freebox_wifi_config`  | Configuration WiFi globale (activé, filtre MAC)              |
 
+### Système
+
+| Outil                  | Description                                                  |
+|------------------------|--------------------------------------------------------------|
+| `freebox_system`       | Uptime, version firmware, températures (CPU, switch), ventilateurs (RPM) |
+
+### Switch LAN
+
+| Outil                    | Description                                                        |
+|--------------------------|--------------------------------------------------------------------|
+| `freebox_switch_ports`   | État des ports LAN : lien, vitesse (Mbps), duplex, MAC + hostname  |
+
 ## Licence
 
 [EUPL-1.2](LICENSE) — European Union Public Licence v1.2
