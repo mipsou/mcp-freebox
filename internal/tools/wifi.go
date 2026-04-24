@@ -45,7 +45,8 @@ type WifiGlobalConfig struct {
 	MacFilterState string `json:"mac_filter_state"`
 }
 
-func registerWifi(s *server.MCPServer, c getter) {
+func registerWifi(s *server.MCPServer, c writer) {
+	// ── Points d'accès ───────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_wifi_aps",
 			mcp.WithDescription("Liste les points d'accès WiFi de la Freebox : bande (2g/5g/60g), canal, état, DFS."),
@@ -59,6 +60,7 @@ func registerWifi(s *server.MCPServer, c getter) {
 		},
 	)
 
+	// ── Config globale ───────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_wifi_config",
 			mcp.WithDescription("Configuration WiFi globale de la Freebox (activé, état du filtre MAC)."),
@@ -69,6 +71,25 @@ func registerWifi(s *server.MCPServer, c getter) {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(cfg)
+		},
+	)
+
+	// ── Toggle WiFi ──────────────────────────────────────────────────────────
+	s.AddTool(
+		mcp.NewTool("freebox_wifi_toggle",
+			mcp.WithDescription("Active ou désactive le WiFi global de la Freebox."),
+			mcp.WithBoolean("enabled",
+				mcp.Required(),
+				mcp.Description("true = activer le WiFi, false = désactiver")),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			enabled := req.GetBool("enabled", false)
+			body := map[string]any{"enabled": enabled}
+			var updated WifiGlobalConfig
+			if err := c.Put(ctx, "/wifi/config/", body, &updated); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(updated)
 		},
 	)
 }
