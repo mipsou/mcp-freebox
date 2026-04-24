@@ -52,10 +52,14 @@ func Discover(ctx context.Context) (*FreeboxInfo, error) {
 	conn.SetDeadline(deadline) //nolint:errcheck
 
 	// Send PTR query for _fbx-api._tcp.local.
+	// QU bit (0x8000) requests a unicast response — the Freebox replies directly
+	// to our ephemeral port instead of multicasting to 224.0.0.251:5353.
+	// This avoids the need to join the multicast group for receiving (which
+	// Windows Firewall blocks by default on non-domain networks).
 	msg := new(dns.Msg)
 	msg.SetQuestion(serviceType, dns.TypePTR)
 	msg.RecursionDesired = false
-	msg.Question[0].Qclass = dns.ClassINET
+	msg.Question[0].Qclass = dns.ClassINET | 0x8000 // QU: unicast-response requested
 
 	packed, err := msg.Pack()
 	if err != nil {
@@ -91,25 +95,33 @@ func Discover(ctx context.Context) (*FreeboxInfo, error) {
 }
 
 // parseResponse extracts FreeboxInfo from an mDNS response message.
+//
+// Host priority: api_domain (TXT) > A/AAAA record > SRV target.
+// api_domain is preferred because it carries a valid TLS certificate issued by
+// Freebox CA, enabling proper HTTPS without InsecureSkipVerify in the future.
+//
+// The SRV port is the HTTP port (80) — it is intentionally ignored here.
+// The HTTPS port comes from the TXT record "https_port" (e.g. 42460).
 func parseResponse(msg *dns.Msg) *FreeboxInfo {
 	info := &FreeboxInfo{HTTPSPort: 443}
 
-	var srvTarget string
+	var apiDomain, aRecord, srvTarget string
 
 	for _, rr := range append(msg.Answer, msg.Extra...) {
 		switch r := rr.(type) {
 		case *dns.SRV:
-			srvTarget = strings.TrimSuffix(r.Target, ".")
-			if r.Port != 0 {
-				info.HTTPSPort = int(r.Port)
+			// SRV target = HTTP hostname; SRV port = HTTP port (not HTTPS).
+			// Kept as last-resort hostname fallback only.
+			if srvTarget == "" {
+				srvTarget = strings.TrimSuffix(r.Target, ".")
 			}
 		case *dns.A:
-			if info.Host == "" {
-				info.Host = r.A.String()
+			if aRecord == "" {
+				aRecord = r.A.String()
 			}
 		case *dns.AAAA:
-			if info.Host == "" && !r.AAAA.IsLinkLocalUnicast() {
-				info.Host = r.AAAA.String()
+			if aRecord == "" && !r.AAAA.IsLinkLocalUnicast() {
+				aRecord = r.AAAA.String()
 			}
 		case *dns.TXT:
 			for _, txt := range r.Txt {
@@ -125,16 +137,19 @@ func parseResponse(msg *dns.Msg) *FreeboxInfo {
 						info.HTTPSPort = p
 					}
 				case "api_domain":
-					if info.Host == "" {
-						info.Host = kv[1]
-					}
+					apiDomain = kv[1]
 				}
 			}
 		}
 	}
 
-	// Fall back to SRV target if no A/AAAA record was found.
-	if info.Host == "" && srvTarget != "" {
+	// Apply host priority: api_domain > A/AAAA > SRV target.
+	switch {
+	case apiDomain != "":
+		info.Host = apiDomain
+	case aRecord != "":
+		info.Host = aRecord
+	case srvTarget != "":
 		info.Host = srvTarget
 	}
 
