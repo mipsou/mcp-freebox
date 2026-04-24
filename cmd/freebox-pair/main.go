@@ -11,6 +11,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mipsou/mcp-freebox/internal/config"
+	"github.com/mipsou/mcp-freebox/internal/mdns"
 )
 
 // permission describes one Freebox OS permission scope.
@@ -50,6 +52,22 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "freebox-pair: config error: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Si FREEBOX_HOST n'est pas défini, découvrir la Freebox via mDNS.
+	if os.Getenv("FREEBOX_HOST") == "" {
+		fmt.Fprintln(os.Stderr, "freebox-pair: FREEBOX_HOST non défini — découverte mDNS en cours...")
+		discovered, err := mdns.Discover(context.Background())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "freebox-pair: mDNS: %v\n", err)
+			fmt.Fprintln(os.Stderr, "freebox-pair: définir FREEBOX_HOST manuellement si mDNS non disponible")
+			os.Exit(1)
+		}
+		cfg.Host = discovered.Host
+		if discovered.HTTPSPort != 0 && discovered.HTTPSPort != 443 {
+			cfg.Host = fmt.Sprintf("%s:%d", discovered.Host, discovered.HTTPSPort)
+		}
+		fmt.Fprintf(os.Stderr, "freebox-pair: Freebox trouvée → %s\n", cfg.Host)
 	}
 
 	printPermissions()
