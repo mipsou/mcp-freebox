@@ -11,6 +11,20 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.8.0] - 2026-04-25
+
+### Ajouté
+- **Système de fichiers** : `freebox_fs_list` — browse le stockage Freebox via `GET /fs/ls/{path base64url}` ; utile en PRA pour vérifier les images qcow2 dans `/Freebox/VMs/`
+
+### Corrigé
+- `StorageDisk.connector` : `string` → `int` (enum connecteur API réel)
+- `StoragePartition.id` : `string` → `int` (ID numérique API réel)
+
+### Interne
+- `callTool()` refactorisé sur `callToolWithArgs()` — suppression du doublon
+
+---
+
 ## [0.7.1] - 2026-04-24
 
 ### Correctif
@@ -152,7 +166,8 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/mipsou/mcp-freebox/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/mipsou/mcp-freebox/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/mipsou/mcp-freebox/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/mipsou/mcp-freebox/compare/v0.5.1...v0.6.0
