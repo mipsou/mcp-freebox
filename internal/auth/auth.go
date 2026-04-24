@@ -11,6 +11,7 @@ import (
 	"crypto/sha1" //nolint:gosec // Freebox OS API mandates HMAC-SHA1
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,6 +19,11 @@ import (
 	"sync"
 	"time"
 )
+
+// ErrTokenRevoked is returned when the Freebox reports the app token is invalid
+// or revoked (error_code: invalid_token / pending_token). The caller should
+// delete the stored token and re-pair.
+var ErrTokenRevoked = errors.New("freebox: app token revoked — re-pairing required")
 
 // Session holds an active session token (in-memory only, never persisted).
 type Session struct {
@@ -142,14 +148,19 @@ func (m *Manager) openSession(password string) (token string, ttl int, err error
 	body, _ := io.ReadAll(resp.Body)
 
 	var env struct {
-		Success bool          `json:"success"`
-		Msg     string        `json:"msg"`
-		Result  sessionResult `json:"result"`
+		Success   bool          `json:"success"`
+		Msg       string        `json:"msg"`
+		ErrorCode string        `json:"error_code"`
+		Result    sessionResult `json:"result"`
 	}
 	if err := json.Unmarshal(body, &env); err != nil {
 		return "", 0, err
 	}
 	if !env.Success {
+		// Distinguish revoked/invalid app token from transient session errors.
+		if env.ErrorCode == "invalid_token" || env.ErrorCode == "pending_token" {
+			return "", 0, ErrTokenRevoked
+		}
 		return "", 0, fmt.Errorf("session error: %s", env.Msg)
 	}
 	// Freebox sessions last ~30 min; we use 25 min to be safe.
