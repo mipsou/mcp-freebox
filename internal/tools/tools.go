@@ -40,5 +40,8 @@ func RegisterAll(s *server.MCPServer, c writer, d discoverer) {
 	registerSwitch(s, c)
 	registerFirewall(s, c)
 	registerVPN(s, c)
-	// P6 — Netshare, Downloads, Calls, Parental
+	registerNetshare(s, c)
+	registerDownloads(s, c)
+	registerCalls(s, c)
+	registerParental(s, c)
 }
