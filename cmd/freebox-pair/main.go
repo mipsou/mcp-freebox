@@ -43,6 +43,7 @@ var freeboxPermissions = []permission{
 	{"Accès au guide TV", "Lecture", false, "Programme télévisé"},
 	{"Programmation des enregistrements", "Lecture/Écriture", false, "Enregistrements TV"},
 	{"Contrôle de la VM", "Contrôle", true, "Création/démarrage/arrêt/suppression de VMs (PRA)"},
+	{"Gestion du VPN", "Lecture/Écriture", true, "État serveur VPN (PPTP/OpenVPN/IPsec/WireGuard), connexions actives, configs client"},
 	{"Accès au gestionnaire de téléchargements", "Lecture/Écriture", false, "Ajout/suppression de téléchargements"},
 }
 
