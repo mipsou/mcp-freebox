@@ -101,13 +101,23 @@ func main() {
 //
 // After a successful auto-pair, the token is saved to wincred for future launches.
 func acquireToken(cfg *config.Config, httpClient *http.Client) (string, error) {
-	// 1. Credential Manager
+	// 1. Credential Manager — with eager validation.
 	if tok, err := wincred.Read(credTarget); err == nil && tok != "" {
-		fmt.Fprintln(os.Stderr, "freebox-mcp: token chargé depuis Credential Manager")
-		return tok, nil
+		if verr := validateToken(cfg, httpClient, tok); verr == nil {
+			fmt.Fprintln(os.Stderr, "freebox-mcp: token valide — démarrage normal")
+			return tok, nil
+		} else if errors.Is(verr, auth.ErrTokenRevoked) {
+			fmt.Fprintln(os.Stderr, "freebox-mcp: token révoqué côté Freebox — suppression et re-pair")
+			_ = wincred.Delete(credTarget)
+			// Fall through to auto-pair.
+		} else {
+			// Network error etc. — return token anyway and let the session retry later.
+			fmt.Fprintf(os.Stderr, "freebox-mcp: validation token impossible (%v) — démarrage avec token existant\n", verr)
+			return tok, nil
+		}
 	}
 
-	// 2. Env var (override / CI)
+	// 2. Env var (override / CI) — no validation, trusted source.
 	if tok := os.Getenv("FREEBOX_APP_TOKEN"); tok != "" {
 		fmt.Fprintln(os.Stderr, "freebox-mcp: token chargé depuis FREEBOX_APP_TOKEN")
 		return tok, nil
@@ -115,6 +125,15 @@ func acquireToken(cfg *config.Config, httpClient *http.Client) (string, error) {
 
 	// 3. Auto-pairing — first launch or after revocation
 	return autoPair(cfg, httpClient)
+}
+
+// validateToken does a lightweight auth check (open + close session) to confirm
+// the app token is still accepted by the Freebox. Returns ErrTokenRevoked if
+// the Freebox rejects the token (revoked / pending), or another error on failure.
+func validateToken(cfg *config.Config, httpClient *http.Client, tok string) error {
+	mgr := auth.New(cfg.BaseURL(), cfg.AppID, tok, httpClient)
+	_, err := mgr.Token()
+	return err
 }
 
 // autoPair sends a pairing request and waits for the user to approve it
