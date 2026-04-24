@@ -16,14 +16,30 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// mockWriter extends mockGetter with configurable Post behaviour.
+// mockWriter extends mockGetter with configurable mutation behaviour.
 type mockWriter struct {
 	mockGetter
-	postErrs map[string]error
+	postErrs   map[string]error
+	putErrs    map[string]error
+	deleteErrs map[string]error
 }
 
 func (m mockWriter) Post(_ context.Context, path string, _, _ any) error {
 	if err, ok := m.postErrs[path]; ok {
+		return err
+	}
+	return nil
+}
+
+func (m mockWriter) Put(_ context.Context, path string, _, _ any) error {
+	if err, ok := m.putErrs[path]; ok {
+		return err
+	}
+	return nil
+}
+
+func (m mockWriter) Delete(_ context.Context, path string) error {
+	if err, ok := m.deleteErrs[path]; ok {
 		return err
 	}
 	return nil
@@ -97,6 +113,28 @@ func TestVMStart_APIError(t *testing.T) {
 	}
 }
 
+func TestVMStop_OK(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
+	result := callToolWithArgs(t, s, "freebox_vm_stop", map[string]any{"id": float64(1)})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"stopping": true`) {
+		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+}
+
+func TestVMStop_APIError(t *testing.T) {
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{},
+		postErrs:   map[string]error{"/vm/1/stop": fmt.Errorf("vm not running")},
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_stop", map[string]any{"id": float64(1)})
+	if !result.IsError {
+		t.Error("expected tool error result")
+	}
+}
+
 func TestVMKill_OK(t *testing.T) {
 	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
 	result := callToolWithArgs(t, s, "freebox_vm_kill", map[string]any{"id": float64(0)})
@@ -105,5 +143,69 @@ func TestVMKill_OK(t *testing.T) {
 	}
 	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"killed": true`) {
 		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+}
+
+func TestVMCreate_OK(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{
+		"/vm/": VM{ID: 2, Name: "test-vm", Status: "stopped", Memory: 1024, Vcpus: 1},
+	}})
+	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name":      "test-vm",
+		"memory":    float64(1024),
+		"vcpus":     float64(1),
+		"disk_path": "Freebox/VMs/test.qcow2",
+		"disk_type": "qcow2",
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+}
+
+func TestVMCreate_APIError(t *testing.T) {
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{},
+		postErrs:   map[string]error{"/vm/": fmt.Errorf("disk not found")},
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name": "fail", "memory": float64(512), "vcpus": float64(1),
+		"disk_path": "bad/path", "disk_type": "qcow2",
+	})
+	if !result.IsError {
+		t.Error("expected tool error result")
+	}
+}
+
+func TestVMUpdate_OK(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{
+		"/vm/0": VM{ID: 0, Name: "renamed", Memory: 4096, Vcpus: 4},
+	}})
+	result := callToolWithArgs(t, s, "freebox_vm_update", map[string]any{
+		"id": float64(0), "name": "renamed", "memory": float64(4096),
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+}
+
+func TestVMDelete_OK(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
+	result := callToolWithArgs(t, s, "freebox_vm_delete", map[string]any{"id": float64(3)})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, "VM 3 supprimée") {
+		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+}
+
+func TestVMDelete_APIError(t *testing.T) {
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{},
+		deleteErrs: map[string]error{"/vm/3": fmt.Errorf("vm not found")},
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_delete", map[string]any{"id": float64(3)})
+	if !result.IsError {
+		t.Error("expected tool error result")
 	}
 }
