@@ -13,9 +13,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -23,6 +21,7 @@ import (
 
 	"github.com/mipsou/mcp-freebox/internal/config"
 	"github.com/mipsou/mcp-freebox/internal/mdns"
+	"github.com/mipsou/mcp-freebox/internal/pair"
 )
 
 // permission describes one Freebox OS permission scope.
@@ -37,13 +36,13 @@ type permission struct {
 // usedByMCP = true si un outil MCP existant l'utilise.
 var freeboxPermissions = []permission{
 	{"Connexion (WAN, débits, xDSL, FTTH)", "Lecture", true, "État ligne, IPs publiques, DynDNS"},
-	{"Modification des réglages de la Freebox", "Lecture/Écriture", true, "Système (uptime, firmware, temp), switch LAN"},
+	{"Modification des réglages de la Freebox", "Lecture/Écriture", true, "Système, switch LAN, WiFi, NAT, DHCP, pare-feu"},
 	{"Accès aux fichiers de la Freebox", "Lecture/Écriture", false, "NAS, stockage interne"},
 	{"Accès à la base de contacts", "Lecture/Écriture", false, "Répertoire téléphonique"},
 	{"Accès au journal d'appels", "Lecture", false, "Historique des appels"},
 	{"Accès au guide TV", "Lecture", false, "Programme télévisé"},
 	{"Programmation des enregistrements", "Lecture/Écriture", false, "Enregistrements TV"},
-	{"Contrôle de la VM", "Contrôle", true, "Démarrage/arrêt machines virtuelles (PRA)"},
+	{"Contrôle de la VM", "Contrôle", true, "Création/démarrage/arrêt/suppression de VMs (PRA)"},
 	{"Accès au gestionnaire de téléchargements", "Lecture/Écriture", false, "Ajout/suppression de téléchargements"},
 }
 
@@ -86,7 +85,7 @@ func main() {
 	}
 
 	fmt.Fprintln(os.Stderr, "\nfreebox-pair: envoi de la demande d'autorisation...")
-	token, err := requestToken(cfg, httpClient)
+	pairReq, err := pair.Start(cfg, httpClient)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "freebox-pair: %v\n", err)
 		os.Exit(1)
@@ -100,7 +99,7 @@ func main() {
 	}
 
 	fmt.Fprintln(os.Stderr, "freebox-pair: en attente de la validation (60s)...")
-	_, appToken, err := waitForGrant(cfg, httpClient, token)
+	appToken, err := pair.WaitForGrant(cfg, httpClient, pairReq, 60*time.Second)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "freebox-pair: %v\n", err)
 		os.Exit(1)
@@ -119,7 +118,7 @@ func printPermissions() {
 	fmt.Fprintln(os.Stderr, "═══════════════════════════════════════════════════════════")
 	fmt.Fprintln(os.Stderr, "")
 
-	fmt.Fprintln(os.Stderr, "  NÉCESSAIRES pour freebox-mcp v0.4 :")
+	fmt.Fprintln(os.Stderr, "  NÉCESSAIRES pour freebox-mcp v0.6 :")
 	for _, p := range freeboxPermissions {
 		if p.usedByMCP {
 			fmt.Fprintf(os.Stderr, "    [✓] %-42s  %-22s  %s\n", p.name, p.access, p.desc)
@@ -127,7 +126,7 @@ func printPermissions() {
 	}
 
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "  ACCORDÉES PAR DÉFAUT (non nécessaires pour v0.4) :")
+	fmt.Fprintln(os.Stderr, "  ACCORDÉES PAR DÉFAUT (non nécessaires pour v0.6) :")
 	for _, p := range freeboxPermissions {
 		if !p.usedByMCP {
 			fmt.Fprintf(os.Stderr, "    [ ] %-42s  %-22s  %s\n", p.name, p.access, p.desc)
@@ -151,84 +150,4 @@ func confirm(prompt string) bool {
 		return false
 	}
 	return strings.ToLower(strings.TrimSpace(stdinScanner.Text())) == "y"
-}
-
-type authorizeRequest struct {
-	AppID      string `json:"app_id"`
-	AppName    string `json:"app_name"`
-	AppVersion string `json:"app_version"`
-	DeviceName string `json:"device_name"`
-}
-
-type authorizeResult struct {
-	AppToken string `json:"app_token"`
-	TrackID  int    `json:"track_id"`
-}
-
-func requestToken(cfg *config.Config, c *http.Client) (*authorizeResult, error) {
-	hostname, _ := os.Hostname()
-	body, _ := json.Marshal(authorizeRequest{
-		AppID:      cfg.AppID,
-		AppName:    "MCP Freebox",
-		AppVersion: "1.0",
-		DeviceName: hostname,
-	})
-
-	resp, err := c.Post(cfg.BaseURL()+"/login/authorize/",
-		"application/json", strings.NewReader(string(body)))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	raw, _ := io.ReadAll(resp.Body)
-	var env struct {
-		Success bool            `json:"success"`
-		Msg     string          `json:"msg"`
-		Result  authorizeResult `json:"result"`
-	}
-	if err := json.Unmarshal(raw, &env); err != nil {
-		return nil, err
-	}
-	if !env.Success {
-		return nil, fmt.Errorf("authorize failed: %s", env.Msg)
-	}
-	return &env.Result, nil
-}
-
-func waitForGrant(cfg *config.Config, c *http.Client, ar *authorizeResult) (int, string, error) {
-	deadline := time.Now().Add(60 * time.Second)
-	for time.Now().Before(deadline) {
-		resp, err := c.Get(fmt.Sprintf("%s/login/authorize/%d", cfg.BaseURL(), ar.TrackID))
-		if err != nil {
-			return 0, "", err
-		}
-		raw, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-
-		var env struct {
-			Success bool   `json:"success"`
-			Msg     string `json:"msg"`
-			Result  struct {
-				Status string `json:"status"`
-			} `json:"result"`
-		}
-		if err := json.Unmarshal(raw, &env); err != nil {
-			return 0, "", err
-		}
-		if !env.Success {
-			return 0, "", fmt.Errorf("poll authorize: %s", env.Msg)
-		}
-
-		switch env.Result.Status {
-		case "granted":
-			return ar.TrackID, ar.AppToken, nil
-		case "denied":
-			return 0, "", fmt.Errorf("accès refusé par l'utilisateur")
-		case "timeout":
-			return 0, "", fmt.Errorf("délai d'autorisation dépassé")
-		}
-		time.Sleep(2 * time.Second)
-	}
-	return 0, "", fmt.Errorf("timeout client : bouton non pressé dans les 60s")
 }

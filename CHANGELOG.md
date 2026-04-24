@@ -11,6 +11,26 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.6.0] - 2026-04-24
+
+### Ajouté
+- **VM CRUD complet** : `freebox_vm_create` (POST /vm/), `freebox_vm_stop` (ACPI gracieux), `freebox_vm_update` (PATCH config), `freebox_vm_delete` (DELETE /vm/{id})
+- **Pare-feu** (lecture seule) : `freebox_firewall_incoming` (règles entrantes), `freebox_firewall_dmz` (config DMZ)
+- **NAT CRUD** : `freebox_nat_create`, `freebox_nat_toggle`, `freebox_nat_delete` (en complément de `freebox_nat_rules` existant)
+- **DHCP CRUD** : `freebox_dhcp_static_create`, `freebox_dhcp_static_delete`
+- **WiFi toggle** : `freebox_wifi_toggle` (PUT /wifi/config/ `{"enabled": bool}`)
+
+### Modifié
+- `cmd/freebox-pair/main.go` : refactorisé pour utiliser `internal/pair.Start()` et `internal/pair.WaitForGrant()` — suppression du code dupliqué `requestToken`/`waitForGrant`
+- `cmd/freebox-pair/main.go` : permissions mises à jour (description "Modification des réglages" couvre WiFi, NAT, DHCP, pare-feu ; "Contrôle de la VM" couvre CRUD complet) ; version bump v0.4 → v0.6
+- `internal/tools/vm.go` : `freebox_vm_start` et `freebox_vm_kill` migrent vers `toFloat()` pour cohérence avec les autres outils
+- README : documentation complète de tous les outils (23 outils total), section architecture interne, pairing automatique
+
+### Corrigé
+- `internal/tools/wifi.go` : correction copyright header (doublon `chpujol@mitjeu`)
+
+---
+
 ## [0.5.1] - 2026-04-24
 
 ### Corrigé
@@ -113,7 +133,8 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/mipsou/mcp-freebox/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/mipsou/mcp-freebox/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/mipsou/mcp-freebox/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/mipsou/mcp-freebox/compare/v0.4.0...v0.4.1
