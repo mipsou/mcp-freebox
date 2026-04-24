@@ -11,6 +11,17 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.5.1] - 2026-04-24
+
+### Corrigé
+- **mDNS** : ajout du bit QU (unicast-response) dans la query PTR — la Freebox répond en unicast, contournant le pare-feu Windows sur 224.0.0.251:5353
+- **`parseResponse()`** : priorité hôte `api_domain` (TXT) > A/AAAA > SRV target ; port SRV (HTTP 80) ignoré — `https_port` vient exclusivement du TXT record (ex : 42460)
+
+### Ajouté
+- `cmd/mdns-debug/` : outil de diagnostic mDNS (build ignore) — 4 tests : écoute passive, QU, multicast, fallback DNS
+
+---
+
 ## [0.5.0] - 2026-04-24
 
 ### Ajouté
@@ -102,7 +113,8 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/mipsou/mcp-freebox/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/mipsou/mcp-freebox/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/mipsou/mcp-freebox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/mipsou/mcp-freebox/compare/v0.3.0...v0.4.0
