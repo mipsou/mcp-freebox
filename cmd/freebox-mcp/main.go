@@ -7,6 +7,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"github.com/mipsou/mcp-freebox/internal/auth"
 	"github.com/mipsou/mcp-freebox/internal/client"
 	"github.com/mipsou/mcp-freebox/internal/config"
+	"github.com/mipsou/mcp-freebox/internal/mdns"
 	"github.com/mipsou/mcp-freebox/internal/tools"
 )
 
@@ -27,6 +29,21 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "freebox-mcp: config error: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Découverte mDNS si FREEBOX_HOST non défini.
+	if os.Getenv("FREEBOX_HOST") == "" {
+		fmt.Fprintln(os.Stderr, "freebox-mcp: FREEBOX_HOST non défini — découverte mDNS...")
+		discovered, err := mdns.Discover(context.Background())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "freebox-mcp: mDNS: %v\n", err)
+			os.Exit(1)
+		}
+		cfg.Host = discovered.Host
+		if discovered.HTTPSPort != 0 && discovered.HTTPSPort != 443 {
+			cfg.Host = fmt.Sprintf("%s:%d", discovered.Host, discovered.HTTPSPort)
+		}
+		fmt.Fprintf(os.Stderr, "freebox-mcp: Freebox trouvée → %s\n", cfg.Host)
 	}
 
 	appToken, err := loadAppToken()
