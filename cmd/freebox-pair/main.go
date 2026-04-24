@@ -54,20 +54,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Si FREEBOX_HOST n'est pas défini, découvrir la Freebox via mDNS.
+	// Si FREEBOX_HOST n'est pas défini, tenter la découverte mDNS.
+	// En cas d'échec : fallback sur mafreebox.freebox.fr (défaut config).
 	if os.Getenv("FREEBOX_HOST") == "" {
-		fmt.Fprintln(os.Stderr, "freebox-pair: FREEBOX_HOST non défini — découverte mDNS en cours...")
+		fmt.Fprintln(os.Stderr, "freebox-pair: découverte mDNS en cours...")
 		discovered, err := mdns.Discover(context.Background())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "freebox-pair: mDNS: %v\n", err)
-			fmt.Fprintln(os.Stderr, "freebox-pair: définir FREEBOX_HOST manuellement si mDNS non disponible")
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, "freebox-pair: mDNS indisponible (%v) — fallback %s\n", err, cfg.Host)
+		} else {
+			cfg.Host = discovered.Host
+			if discovered.HTTPSPort != 0 && discovered.HTTPSPort != 443 {
+				cfg.Host = fmt.Sprintf("%s:%d", discovered.Host, discovered.HTTPSPort)
+			}
+			fmt.Fprintf(os.Stderr, "freebox-pair: Freebox trouvée → %s\n", cfg.Host)
 		}
-		cfg.Host = discovered.Host
-		if discovered.HTTPSPort != 0 && discovered.HTTPSPort != 443 {
-			cfg.Host = fmt.Sprintf("%s:%d", discovered.Host, discovered.HTTPSPort)
-		}
-		fmt.Fprintf(os.Stderr, "freebox-pair: Freebox trouvée → %s\n", cfg.Host)
 	}
 
 	printPermissions()
