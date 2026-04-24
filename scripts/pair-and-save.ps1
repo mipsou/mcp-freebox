@@ -34,9 +34,9 @@ Write-Host "── Pairing Freebox (interactif) ──────────�
 Write-Host "  Le token apparaîtra sur la dernière ligne." -ForegroundColor Yellow
 Write-Host ""
 
-$env:FREEBOX_HOST      = "mafreebox.freebox.fr"
 $env:FREEBOX_APP_ID    = "mcp-freebox"
 $env:FREEBOX_APP_TOKEN = ""
+# FREEBOX_HOST non défini → défaut mafreebox.freebox.fr (voir config.go DefaultHost)
 
 # Exécution native — stdin/stdout/stderr passent directement au terminal
 & "$projectRoot\freebox-pair.exe"
