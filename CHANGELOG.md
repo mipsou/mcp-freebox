@@ -11,6 +11,27 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.17.0] - 2026-04-26
+
+### Ajouté
+- **Firmware** : `freebox_firmware_update_status` — vérification disponibilité mise à jour
+- **AirMedia** : `freebox_airmedia_config` — configuration AirMedia (activé, mot de passe)
+- **AirMedia** : `freebox_airmedia_receivers` — liste des récepteurs (capacités photo/vidéo/audio)
+- **Connexion** : `freebox_connection_config` — config WAN (ping, accès distant, Wake-on-LAN port)
+- **Téléchargements** : `freebox_download_config` — config gestionnaire (vitesse, dossier, ratio seeding)
+- **Fichiers** : `freebox_fs_mkdir` — création répertoire (tâche asynchrone)
+- **Fichiers** : `freebox_fs_delete` — suppression fichier/répertoire ⚠️ (tâche asynchrone)
+- **CI** : `.github/workflows/ci.yml` — pipeline go vet + tests + build + golangci-lint
+- **CI** : `.golangci.yml` — configuration linter (govet, errcheck, staticcheck, ineffassign)
+- **Qualité** : `QUALITY_AUDIT.md` — rapport comité multidisciplinaire (5 rôles)
+
+### Modifié
+- **Sécurité** : `wincred` — fix `unsafe.Pointer` via `unsafe.Slice` + `*credentialW` output pattern ; `go vet` PASS
+- **Architecture** : 11 fonctions `registerXxx` dégradées `writer→getter` (principle of least privilege)
+- **README** : mis à jour (49→65 outils)
+
+---
+
 ## [0.16.0] - 2026-04-27
 
 ### Ajouté
@@ -261,7 +282,8 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/mipsou/mcp-freebox/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/mipsou/mcp-freebox/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/mipsou/mcp-freebox/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/mipsou/mcp-freebox/compare/v0.13.0...v0.14.0
