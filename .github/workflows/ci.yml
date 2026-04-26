@@ -28,6 +28,11 @@ jobs:
       - name: Build
         run: go build -o freebox-mcp.exe ./cmd/freebox-mcp
 
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
   lint:
     name: golangci-lint
     runs-on: windows-latest
