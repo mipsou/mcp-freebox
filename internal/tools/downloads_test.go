@@ -81,3 +81,41 @@ func TestDownloadDelete_OK(t *testing.T) {
 		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
 	}
 }
+
+// ── Sécurité : validation URL (SSRF) ─────────────────────────────────────────
+
+func TestValidateDownloadURL_ValidHTTPS(t *testing.T) {
+	if err := validateDownloadURL("https://example.com/file.zip"); err != nil {
+		t.Errorf("unexpected error for valid HTTPS URL: %v", err)
+	}
+}
+
+func TestValidateDownloadURL_ValidMagnet(t *testing.T) {
+	if err := validateDownloadURL("magnet:?xt=urn:btih:abc123&dn=test"); err != nil {
+		t.Errorf("unexpected error for valid magnet link: %v", err)
+	}
+}
+
+func TestValidateDownloadURL_FileSchemeBlocked(t *testing.T) {
+	if err := validateDownloadURL("file:///etc/passwd"); err == nil {
+		t.Error("file:// scheme should be blocked")
+	}
+}
+
+func TestValidateDownloadURL_GopherBlocked(t *testing.T) {
+	if err := validateDownloadURL("gopher://evil.com/"); err == nil {
+		t.Error("gopher:// scheme should be blocked")
+	}
+}
+
+func TestValidateDownloadURL_LoopbackBlocked(t *testing.T) {
+	if err := validateDownloadURL("http://127.0.0.1/secret"); err == nil {
+		t.Error("loopback address should be blocked")
+	}
+}
+
+func TestValidateDownloadURL_LinkLocalBlocked(t *testing.T) {
+	if err := validateDownloadURL("http://169.254.169.254/latest/meta-data/"); err == nil {
+		t.Error("link-local SSRF target should be blocked")
+	}
+}

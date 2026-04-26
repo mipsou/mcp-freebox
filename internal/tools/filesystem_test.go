@@ -85,3 +85,45 @@ func TestFSDelete_NoError(t *testing.T) {
 		t.Errorf("unexpected error: %v", req.Content)
 	}
 }
+
+// ── Sécurité : path traversal ────────────────────────────────────────────────
+
+func TestSanitizeFSPath_Valid(t *testing.T) {
+	cases := []string{"/Freebox/VMs", "/Freebox/Downloads/file.iso", "/mnt/usb"}
+	for _, c := range cases {
+		if _, err := sanitizeFSPath(c); err != nil {
+			t.Errorf("sanitizeFSPath(%q) unexpected error: %v", c, err)
+		}
+	}
+}
+
+func TestSanitizeFSPath_TraversalRejected(t *testing.T) {
+	cases := []string{"/../etc/passwd", "/Freebox/../../etc", ".."}
+	for _, c := range cases {
+		if _, err := sanitizeFSPath(c); err == nil {
+			t.Errorf("sanitizeFSPath(%q) should have returned error", c)
+		}
+	}
+}
+
+func TestSanitizeFSPath_RootRejected(t *testing.T) {
+	if _, err := sanitizeFSPath("/"); err == nil {
+		t.Error("sanitizeFSPath('/') should have returned error")
+	}
+}
+
+func TestFSList_TraversalBlocked(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_list", map[string]any{"path": "/../etc/passwd"})
+	if !req.IsError {
+		t.Error("path traversal should return error")
+	}
+}
+
+func TestFSDelete_TraversalBlocked(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_delete", map[string]any{"path": "/Freebox/../../etc"})
+	if !req.IsError {
+		t.Error("path traversal should return error")
+	}
+}
