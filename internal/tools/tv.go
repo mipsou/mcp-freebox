@@ -34,7 +34,7 @@ type TVRecord struct {
 	Error     string `json:"error"`
 }
 
-func registerTV(s *server.MCPServer, c writer) {
+func registerTV(s *server.MCPServer, c getter) {
 	// ── Chaînes TV ────────────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_tv_channels",

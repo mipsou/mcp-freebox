@@ -2,7 +2,7 @@
 
 Serveur MCP (Model Context Protocol) pour la Freebox Delta via l'API Freebox OS v4.
 
-**49 outils MCP** couvrant : connexion WAN, LAN, DHCP, NAT, pare-feu, WiFi, VPN, VM, stockage, fichiers, système, réseau, contacts, TV, téléchargements, contrôle parental, Wake-on-LAN.
+**65 outils MCP** couvrant : connexion WAN, LAN, DHCP, NAT, pare-feu, WiFi, VPN, VM, stockage, fichiers, système, réseau, contacts, TV, téléchargements, contrôle parental, Wake-on-LAN, AirMedia, journal système, firmware.
 
 ## Prérequis
 

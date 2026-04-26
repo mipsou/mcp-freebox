@@ -33,7 +33,7 @@ type ContactAddr struct {
 	Value string `json:"value"`
 }
 
-func registerContacts(s *server.MCPServer, c writer) {
+func registerContacts(s *server.MCPServer, c getter) {
 	// ── Liste ────────────────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_contacts",

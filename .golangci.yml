@@ -1,0 +1,21 @@
+version: "2"
+
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - ineffassign
+    - unused
+    - misspell
+    - gofmt
+    - gosimple
+
+linters-settings:
+  govet:
+    enable:
+      - unsafeptr
+
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 10

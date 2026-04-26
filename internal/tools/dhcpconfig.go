@@ -24,7 +24,7 @@ type DHCPConfig struct {
 	AlwaysBroadcast bool  `json:"always_broadcast"`
 }
 
-func registerDHCPConfig(s *server.MCPServer, c writer) {
+func registerDHCPConfig(s *server.MCPServer, c getter) {
 	// ── Config serveur DHCP ───────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_dhcp_config",

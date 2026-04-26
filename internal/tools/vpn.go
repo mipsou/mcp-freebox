@@ -45,7 +45,7 @@ type VPNClientConfig struct {
 	Type        string `json:"type"`
 }
 
-func registerVPN(s *server.MCPServer, c writer) {
+func registerVPN(s *server.MCPServer, c getter) {
 	// ── Serveur VPN — état des protocoles ────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_vpn_server_status",
