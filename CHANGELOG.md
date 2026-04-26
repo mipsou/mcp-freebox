@@ -11,6 +11,34 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.12.0] - 2026-04-27
+
+### Ajouté
+- **LAN** : `freebox_lan_config` — configuration réseau LAN (IP, masque, mode router/bridge, noms DNS/mDNS/NetBIOS)
+- **LAN** : `freebox_lan_host_rename` — renommer un équipement du réseau local par son ID
+
+---
+
+## [0.11.0] - 2026-04-27
+
+### Ajouté
+- **Réseau** : `freebox_routes_ipv4` — liste des routes statiques IPv4 (destination, masque, gateway, état)
+- **Réseau** : `freebox_routes_ipv6` — liste des routes statiques IPv6 (destination, préfixe, gateway, état)
+- **Réseau** : `freebox_route_add` — création d'une route statique IPv4
+- **Réseau** : `freebox_route_delete` — suppression d'une route statique IPv4
+- **Système** : `freebox_reboot` — redémarrage de la Freebox (confirmation explicite recommandée)
+
+---
+
+## [0.10.0] - 2026-04-25
+
+### Ajouté
+- **Contacts** : `freebox_contacts` — liste le répertoire téléphonique (nom, numéros, emails)
+- **Contacts** : `freebox_contact_get` — détail complet d'un contact par ID
+- **Wake-on-LAN** : `freebox_wol` — envoie un magic packet à une adresse MAC pour démarrer un équipement à distance (NAS, PC) ; supporte SecureOn password et choix d'interface
+
+---
+
 ## [0.9.1] - 2026-04-25
 
 ### Corrigé
@@ -192,7 +220,10 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/mipsou/mcp-freebox/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/mipsou/mcp-freebox/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/mipsou/mcp-freebox/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/mipsou/mcp-freebox/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/mipsou/mcp-freebox/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/mipsou/mcp-freebox/compare/v0.7.1...v0.8.0
