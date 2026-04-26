@@ -63,3 +63,25 @@ func TestFSList_APIError(t *testing.T) {
 		t.Error("expected tool error result")
 	}
 }
+
+// mockGetter.Post always returns nil → mkdir/delete never error
+func TestFSMkdir_NoError(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_mkdir", map[string]any{
+		"parent": "/Freebox/Downloads",
+		"name":   "test-dir",
+	})
+	if req.IsError {
+		t.Errorf("unexpected error: %v", req.Content)
+	}
+}
+
+func TestFSDelete_NoError(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_delete", map[string]any{
+		"path": "/Freebox/Downloads/old-file.iso",
+	})
+	if req.IsError {
+		t.Errorf("unexpected error: %v", req.Content)
+	}
+}
