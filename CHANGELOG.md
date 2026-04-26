@@ -11,6 +11,17 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.11.0] - 2026-04-27
+
+### Ajouté
+- **Réseau** : `freebox_routes_ipv4` — liste des routes statiques IPv4 (destination, masque, gateway, état)
+- **Réseau** : `freebox_routes_ipv6` — liste des routes statiques IPv6 (destination, préfixe, gateway, état)
+- **Réseau** : `freebox_route_add` — création d'une route statique IPv4
+- **Réseau** : `freebox_route_delete` — suppression d'une route statique IPv4
+- **Système** : `freebox_reboot` — redémarrage de la Freebox (confirmation explicite recommandée)
+
+---
+
 ## [0.10.0] - 2026-04-25
 
 ### Ajouté
@@ -201,7 +212,8 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/mipsou/mcp-freebox/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/mipsou/mcp-freebox/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/mipsou/mcp-freebox/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/mipsou/mcp-freebox/compare/v0.8.0...v0.9.0
