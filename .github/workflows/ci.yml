@@ -1,5 +1,11 @@
 name: CI
 
+# Security: GITHUB_TOKEN is read-only for all jobs.
+# Actions are pinned to specific versions to prevent supply chain attacks.
+# TODO(hardening): pin each action to a commit SHA with pinact or Dependabot.
+permissions:
+  contents: read
+
 on:
   push:
     branches: ["**"]
@@ -12,12 +18,18 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v5.4.0
         with:
           go-version-file: go.mod
+          cache: true
+
+      - name: Verify modules
+        # go mod verify checks that downloaded modules match go.sum checksums.
+        # Detects tampered or corrupted module caches before any build or test.
+        run: go mod verify
 
       - name: go vet
         run: go vet ./...
@@ -29,8 +41,9 @@ jobs:
         run: go build -o freebox-mcp.exe ./cmd/freebox-mcp
 
       - name: govulncheck
+        # Pinned to explicit version — @latest is a supply chain risk.
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           govulncheck ./...
 
   lint:
@@ -38,15 +51,16 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v5.4.0
         with:
           go-version-file: go.mod
+          cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v6.5.2
         with:
-          version: latest
+          version: v1.64.8
           args: --timeout=3m
