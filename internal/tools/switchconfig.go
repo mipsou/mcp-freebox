@@ -33,7 +33,7 @@ type SwitchStats struct {
 	TxErrors    int64 `json:"tx_errors"`
 }
 
-func registerSwitchConfig(s *server.MCPServer, c writer) {
+func registerSwitchConfig(s *server.MCPServer, c getter) {
 	// ── Config d'un port ──────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_switch_port_config",

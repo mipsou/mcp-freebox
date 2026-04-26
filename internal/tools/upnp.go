@@ -32,7 +32,7 @@ type UPnPIGDMapping struct {
 	Duration    int    `json:"duration"` // secondes, 0 = permanent
 }
 
-func registerUPnP(s *server.MCPServer, c writer) {
+func registerUPnP(s *server.MCPServer, c getter) {
 	// ── Config UPnP ───────────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_upnp_config",

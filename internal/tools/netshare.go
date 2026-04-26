@@ -34,7 +34,7 @@ type SambaShare struct {
 	ReadOnly bool   `json:"readonly"`
 }
 
-func registerNetshare(s *server.MCPServer, c writer) {
+func registerNetshare(s *server.MCPServer, c getter) {
 	// ── Samba — config globale ────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_samba_config",

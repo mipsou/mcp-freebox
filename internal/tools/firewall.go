@@ -31,7 +31,7 @@ type DMZConfig struct {
 	IP      string `json:"ip"`
 }
 
-func registerFirewall(s *server.MCPServer, c writer) {
+func registerFirewall(s *server.MCPServer, c getter) {
 	// ── Règles entrantes ─────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_firewall_incoming",
