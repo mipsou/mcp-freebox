@@ -11,6 +11,65 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.9.1] - 2026-04-25
+
+### Corrigé
+- **Netshare** : chemins API `/share/samba/` → `/netshare/samba/`, `/share/afp/` → `/netshare/afp/` (endpoint réel Freebox)
+- **freebox-pair** : `usedByMCP: true` sur fichiers, journal d'appels, téléchargements ; permission **Contrôle parental** ajoutée (re-pairing requis pour activer les outils parental)
+
+---
+
+## [0.9.0] - 2026-04-25
+
+### Ajouté
+
+- **Netshare** : `freebox_samba_config` — état et configuration du serveur Samba (workgroup, logon, imprimante)
+- **Netshare** : `freebox_samba_shares` — liste des partages Samba (nom, chemin, lecture seule)
+- **Netshare** : `freebox_afp_config` — état du serveur AFP (Apple Filing Protocol)
+- **Downloads** : `freebox_downloads` — liste des téléchargements (HTTP, BitTorrent, NZB) avec statut et progression
+- **Downloads** : `freebox_download_add` — ajout d'un téléchargement par URL ou lien magnet
+- **Downloads** : `freebox_download_toggle` — pause ou reprise d'un téléchargement
+- **Downloads** : `freebox_download_delete` — suppression d'un téléchargement de la liste
+- **Calls** : `freebox_call_log` — journal des appels téléphoniques (entrants, manqués, sortants)
+- **Parental** : `freebox_parental_config` — configuration globale du contrôle parental (activé, politique par défaut)
+- **Parental** : `freebox_parental_planning` — plages horaires de restriction par jour
+- **Parental** : `freebox_parental_filters` — appareils soumis au contrôle parental (filtre MAC)
+
+---
+
+## [0.8.0] - 2026-04-25
+
+### Ajouté
+- **Système de fichiers** : `freebox_fs_list` — browse le stockage Freebox via `GET /fs/ls/{path base64url}` ; utile en PRA pour vérifier les images qcow2 dans `/Freebox/VMs/`
+
+### Corrigé
+- `StorageDisk.connector` : `string` → `int` (enum connecteur API réel)
+- `StoragePartition.id` : `string` → `int` (ID numérique API réel)
+
+### Interne
+- `callTool()` refactorisé sur `callToolWithArgs()` — suppression du doublon
+
+---
+
+## [0.7.1] - 2026-04-24
+
+### Correctif
+
+- **Démarrage non-bloquant** : le serveur MCP démarre immédiatement même si le token est absent ou révoqué — l'auto-pairing tourne en goroutine, les outils retournent un message clair et deviennent opérationnels dès l'approbation Freebox OS, sans redémarrage
+
+---
+
+## [0.7.0] - 2026-04-24
+
+### Ajouté
+
+- **VPN Serveur** : `freebox_vpn_server_status` — état des 5 protocoles (PPTP, OpenVPN Routé/Bridgé, IPsec IKEv2, WireGuard) avec nombre de connexions actives
+- **VPN Serveur** : `freebox_vpn_connections` — clients VPN actuellement connectés (login, IP source, IP tunnel, routes poussées)
+- **VPN Client** : `freebox_vpn_client_configs` — configurations VPN sortant vers un serveur externe
+- Permission **"Gestion du VPN"** dans `freebox-pair` — re-pairing requis pour activer les outils VPN
+
+---
+
 ## [0.6.0] - 2026-04-24
 
 ### Ajouté
@@ -133,7 +192,12 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/mipsou/mcp-freebox/compare/v0.9.0...v0.9.1
+[0.9.0]: https://github.com/mipsou/mcp-freebox/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/mipsou/mcp-freebox/compare/v0.7.1...v0.8.0
+[0.7.1]: https://github.com/mipsou/mcp-freebox/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/mipsou/mcp-freebox/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/mipsou/mcp-freebox/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/mipsou/mcp-freebox/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/mipsou/mcp-freebox/compare/v0.4.1...v0.5.0

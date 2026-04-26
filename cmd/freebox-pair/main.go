@@ -37,13 +37,15 @@ type permission struct {
 var freeboxPermissions = []permission{
 	{"Connexion (WAN, débits, xDSL, FTTH)", "Lecture", true, "État ligne, IPs publiques, DynDNS"},
 	{"Modification des réglages de la Freebox", "Lecture/Écriture", true, "Système, switch LAN, WiFi, NAT, DHCP, pare-feu"},
-	{"Accès aux fichiers de la Freebox", "Lecture/Écriture", false, "NAS, stockage interne"},
+	{"Accès aux fichiers de la Freebox", "Lecture/Écriture", true, "NAS, stockage interne (freebox_fs_list)"},
 	{"Accès à la base de contacts", "Lecture/Écriture", false, "Répertoire téléphonique"},
-	{"Accès au journal d'appels", "Lecture", false, "Historique des appels"},
+	{"Accès au journal d'appels", "Lecture", true, "Historique des appels (freebox_call_log)"},
 	{"Accès au guide TV", "Lecture", false, "Programme télévisé"},
 	{"Programmation des enregistrements", "Lecture/Écriture", false, "Enregistrements TV"},
 	{"Contrôle de la VM", "Contrôle", true, "Création/démarrage/arrêt/suppression de VMs (PRA)"},
-	{"Accès au gestionnaire de téléchargements", "Lecture/Écriture", false, "Ajout/suppression de téléchargements"},
+	{"Gestion du VPN", "Lecture/Écriture", true, "État serveur VPN (PPTP/OpenVPN/IPsec/WireGuard), connexions actives, configs client"},
+	{"Accès au gestionnaire de téléchargements", "Lecture/Écriture", true, "Liste, ajout, pause, suppression de téléchargements"},
+	{"Contrôle parental", "Lecture/Écriture", true, "Config, plages horaires et filtres MAC du contrôle parental"},
 }
 
 func main() {
