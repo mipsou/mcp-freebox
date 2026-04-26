@@ -51,4 +51,7 @@ func RegisterAll(s *server.MCPServer, c writer, d discoverer) {
 	registerLANConfig(s, c)
 	registerWifiBSS(s, c)
 	registerTV(s, c)
+	registerDHCPConfig(s, c)
+	registerUPnP(s, c)
+	registerLCD(s, c)
 }
