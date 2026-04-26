@@ -48,4 +48,5 @@ func RegisterAll(s *server.MCPServer, c writer, d discoverer) {
 	registerWOL(s, c)
 	registerNetwork(s, c)
 	registerSysAction(s, c)
+	registerLANConfig(s, c)
 }
