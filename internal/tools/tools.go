@@ -44,4 +44,6 @@ func RegisterAll(s *server.MCPServer, c writer, d discoverer) {
 	registerDownloads(s, c)
 	registerCalls(s, c)
 	registerParental(s, c)
+	registerContacts(s, c)
+	registerWOL(s, c)
 }
