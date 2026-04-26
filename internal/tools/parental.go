@@ -37,7 +37,7 @@ type ParentalFilter struct {
 	Enabled bool   `json:"enabled"`
 }
 
-func registerParental(s *server.MCPServer, c writer) {
+func registerParental(s *server.MCPServer, c getter) {
 	// ── Config globale ────────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_parental_config",
