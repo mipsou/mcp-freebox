@@ -11,9 +11,9 @@
 
 | Sévérité  | Findings | Fixés |
 |-----------|----------|-------|
-| CRITICAL  | 4        | 3 ✅  |
+| CRITICAL  | 3        | 3 ✅  |
 | HIGH      | 7        | 3 ✅  |
-| MEDIUM    | 4        | 0     |
+| MEDIUM    | 5        | 0     |
 | LOW       | 1        | 0     |
 
 ---
@@ -38,12 +38,21 @@
 - **Fix** : `validateMAC()` regex `([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}`, `validateSecureOn()` limite 17 chars
 - **Tests** : `TestValidateMAC_Invalid`, `TestValidateSecureOn_TooLong`, `TestWOL_InvalidMAC`
 
-### [CRITICAL — BACKLOG] C4 — `InsecureSkipVerify: true` dans le client HTTP
-- **Vecteur** : Attaquant MITM sur LAN → cert auto-signé → intercepte/modifie tous les appels API
-- **Contexte** : La Freebox utilise un cert auto-signé pour son API locale. `InsecureSkipVerify` est nécessaire sans cert pinning.
+### [MEDIUM — BACKLOG] C4 — `InsecureSkipVerify: true` dans le client HTTP
+
+> ⚠️ **Correction (2026-04-27)** : Classification initiale CRITICAL incorrecte — reclassifié MEDIUM après analyse des pratiques TLS réelles de la Freebox.
+
+- **Vecteur** : Attaquant MITM sur LAN → interception des appels API
+- **Périmètre réel** :
+  - HTTP est utilisé **uniquement** pour la découverte (`GET /api_version`) — endpoint public, non authentifié, par conception de l'API Freebox OS
+  - HTTPS est utilisé pour **tous les appels authentifiés** vers `mafreebox.freebox.fr`
+  - Le cert Freebox est auto-signé par la **propre CA de Free** (pas une CA publique, pas Let's Encrypt)
+  - **Free ne publie pas sa CA** → aucun bundle officiel n'est disponible pour le pinning standard
+  - `InsecureSkipVerify: true` est **documenté intentionnellement** dans le code (commentaire explicite)
+- **Menace réelle** : MITM sur réseau LAN local uniquement — l'API Freebox n'est jamais exposée sur Internet
+- **Atténuation actuelle** : Acceptable comme tradeoff documenté tant que la CA Free reste non publiée
+- **Piste future (non triviale)** : TOFU (Trust On First Use) — capturer et stocker le fingerprint SHA-256 du cert lors du premier pairing, puis valider à chaque connexion. Nécessite refactoring du flow `freebox_auth`.
 - **Fichier** : `cmd/freebox-mcp/main.go` (TLS config)
-- **Mitigation** : Implémenter le cert pinning via le fingerprint SHA-256 du cert Freebox (récupéré au premier pairing)
-- **Action** : Issue GitHub #20 — `fix: TLS cert pinning à la place de InsecureSkipVerify`
 
 ### [CRITICAL — BACKLOG] C5 — Prompt injection → création règle NAT/firewall
 - **Vecteur** : Attaquant injecte dans un prompt → Claude appelle `freebox_nat_create` avec `wan_port=22`, `lan_ip=<attacker-machine>` → SSH exposé sur Internet
@@ -60,9 +69,10 @@
 - **Mitigation** : Documenter clairement que `freebox-mcp` doit tourner en utilisateur non-privilégié. Ne jamais lancer en tant qu'admin.
 - **Action** : Ajouter dans README : "Sécurité — Exécution en utilisateur standard recommandée"
 
-### [HIGH — BACKLOG] D2 — Session token transmis en clair (HTTP) si TLS désactivé
-- **Finding** : Le header `X-Fbx-App-Auth` contient le session token. Si MITM réussit (C4), le token est capturé → replay attack.
-- **Mitigation** : Dépend du fix C4 (cert pinning). Une fois TLS valide, le token est protégé.
+### [HIGH — BACKLOG] D2 — Session token exposable en cas de MITM LAN (lié à C4)
+- **Finding** : Le header `X-Fbx-App-Auth` contient le session token. Si MITM LAN réussit via C4, le token peut être capturé → replay attack.
+- **Contexte** : HTTPS est actif sur tous les appels authentifiés ; HTTP est réservé à `/api_version` (non authentifié). Le risque D2 se matérialise **uniquement** si l'attaquant réussit un MITM complet via C4 (LAN, `InsecureSkipVerify`).
+- **Mitigation** : Dépend de la résolution TOFU de C4. Jusqu'à cette implémentation, le token reste protégé par HTTPS si aucun MITM actif n'est présent sur le LAN.
 
 ### [HIGH] D3 — `app_token` accepté via variable d'environnement `FREEBOX_APP_TOKEN`
 - **Finding** : `os.Getenv("FREEBOX_APP_TOKEN")` dans `main.go` permet de bypasser Windows Credential Manager. Env vars visibles dans `ps aux`, logs CI, core dumps.
@@ -115,7 +125,7 @@
 - [ ] Fix D4 : `govulncheck` en CI
 
 ### Moyen terme
-- [ ] Fix C4 : TLS cert pinning (remplace `InsecureSkipVerify`)
+- [ ] Fix C4 : TOFU cert pinning (capturer fingerprint SHA-256 au premier pairing — **Free ne publie pas sa CA**, cert pinning naïf impossible)
 - [ ] Fix I2 : validation IP DHCP statique
 - [ ] Documentation D1/D3 : sécurité opérationnelle README
 
