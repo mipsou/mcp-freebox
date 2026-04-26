@@ -26,7 +26,7 @@ type CallEntry struct {
 	New       bool   `json:"new"`       // non lu
 }
 
-func registerCalls(s *server.MCPServer, c writer) {
+func registerCalls(s *server.MCPServer, c getter) {
 	// ── Journal d'appels ─────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_call_log",

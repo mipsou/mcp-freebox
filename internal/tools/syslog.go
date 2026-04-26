@@ -22,7 +22,7 @@ type SystemLog struct {
 	Category  string `json:"category"`
 }
 
-func registerSysLog(s *server.MCPServer, c writer) {
+func registerSysLog(s *server.MCPServer, c getter) {
 	s.AddTool(
 		mcp.NewTool("freebox_system_log",
 			mcp.WithDescription("Journal système de la Freebox : événements (démarrage, erreurs, mises à jour, connexions) avec horodatage, niveau (info/warning/error/critical) et catégorie. Lecture seule."),
