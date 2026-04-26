@@ -11,6 +11,15 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.10.0] - 2026-04-25
+
+### Ajouté
+- **Contacts** : `freebox_contacts` — liste le répertoire téléphonique (nom, numéros, emails)
+- **Contacts** : `freebox_contact_get` — détail complet d'un contact par ID
+- **Wake-on-LAN** : `freebox_wol` — envoie un magic packet à une adresse MAC pour démarrer un équipement à distance (NAS, PC) ; supporte SecureOn password et choix d'interface
+
+---
+
 ## [0.9.1] - 2026-04-25
 
 ### Corrigé
@@ -192,7 +201,8 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/mipsou/mcp-freebox/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/mipsou/mcp-freebox/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/mipsou/mcp-freebox/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/mipsou/mcp-freebox/compare/v0.7.1...v0.8.0
