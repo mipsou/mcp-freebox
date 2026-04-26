@@ -1,8 +1,8 @@
 name: CI
 
-# Security: GITHUB_TOKEN is read-only for all jobs.
-# Actions are pinned to specific versions to prevent supply chain attacks.
-# TODO(hardening): pin each action to a commit SHA with pinact or Dependabot.
+# Security: GITHUB_TOKEN is read-only by default (workflow level).
+# Jobs that need elevated permissions declare them explicitly (least privilege).
+# Actions pinned to minor versions — SHA pinning tracked via Dependabot / pinact.
 permissions:
   contents: read
 
@@ -64,3 +64,30 @@ jobs:
         with:
           version: v1.64.8
           args: --timeout=3m
+
+  pipeline-security:
+    name: Pipeline Security (zizmor + actionlint)
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: read         # zizmor — fetches action metadata for online audits
+      security-events: write # zizmor — uploads SARIF to GitHub Advanced Security tab
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: zizmor
+        # Static analysis for GitHub Actions workflows.
+        # Detects: template injection, unpinned actions, excessive permissions,
+        # credential exposure, dangerous action patterns — 30+ audit rules.
+        # SHA-pinned (v0.5.3) — zizmor is one of the few actions with SHA examples in docs.
+        uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
+        with:
+          advanced-security: true  # upload findings to GitHub Security tab (SARIF)
+          # persona: pedantic       # uncomment to also flag missing SHA pins
+
+      - name: actionlint
+        # Type-checks ${{ }} expressions, validates action inputs/outputs,
+        # detects script injection via untrusted inputs, shellcheck on run: steps.
+        uses: devops-actions/actionlint@v0.1.11
