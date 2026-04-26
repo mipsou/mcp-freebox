@@ -11,6 +11,19 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.18.0] - 2026-04-26
+
+### Sécurité — Audit comité cyber (3 rôles : red team · credentials · OWASP)
+- **CRITICAL** : `freebox_fs_list/mkdir/delete` — `sanitizeFSPath()` bloque les path traversal (`..`, `/`)
+- **CRITICAL** : `freebox_download_add` — `validateDownloadURL()` : whitelist `http/https/magnet/nzb`, blocage loopback et `169.254.x.x` (SSRF)
+- **HIGH** : `freebox_wol` — validation regex adresse MAC, limite taille SecureOn (17 chars max)
+- **CI** : `govulncheck ./...` ajouté au pipeline GitHub Actions
+
+### Ajouté
+- `CYBER_AUDIT.md` — rapport complet (16 findings, plan d'action priorisé)
+
+---
+
 ## [0.17.0] - 2026-04-26
 
 ### Ajouté
@@ -282,7 +295,8 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/mipsou/mcp-freebox/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/mipsou/mcp-freebox/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/mipsou/mcp-freebox/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/mipsou/mcp-freebox/compare/v0.14.0...v0.15.0
