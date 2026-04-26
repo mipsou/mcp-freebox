@@ -56,4 +56,8 @@ func RegisterAll(s *server.MCPServer, c writer, d discoverer) {
 	registerLCD(s, c)
 	registerSwitchConfig(s, c)
 	registerSysLog(s, c)
+	registerFirmware(s, c)
+	registerAirMedia(s, c)
+	registerConnectionConfig(s, c)
+	registerDownloadConfig(s, c)
 }
