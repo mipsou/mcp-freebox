@@ -42,7 +42,7 @@ func registerNetshare(s *server.MCPServer, c writer) {
 		),
 		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var cfg SambaConfig
-			if err := c.Get(ctx, "/share/samba/", &cfg); err != nil {
+			if err := c.Get(ctx, "/netshare/samba/", &cfg); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(cfg)
@@ -56,7 +56,7 @@ func registerNetshare(s *server.MCPServer, c writer) {
 		),
 		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var shares []SambaShare
-			if err := c.Get(ctx, "/share/samba/share/", &shares); err != nil {
+			if err := c.Get(ctx, "/netshare/samba/share/", &shares); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(shares)
@@ -70,7 +70,7 @@ func registerNetshare(s *server.MCPServer, c writer) {
 		),
 		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var cfg AFPConfig
-			if err := c.Get(ctx, "/share/afp/", &cfg); err != nil {
+			if err := c.Get(ctx, "/netshare/afp/", &cfg); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(cfg)

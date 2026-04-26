@@ -23,7 +23,7 @@ func newNetshareServer(t *testing.T, mock mockGetter) *server.MCPServer {
 
 func TestSambaConfig_OK(t *testing.T) {
 	s := newNetshareServer(t, mockGetter{
-		"/share/samba/": SambaConfig{Enabled: true, WorkGroup: "WORKGROUP"},
+		"/netshare/samba/": SambaConfig{Enabled: true, WorkGroup: "WORKGROUP"},
 	})
 	result := callTool(t, s, "freebox_samba_config")
 	if result.IsError {
@@ -44,7 +44,7 @@ func TestSambaConfig_APIError(t *testing.T) {
 
 func TestSambaShares_OK(t *testing.T) {
 	s := newNetshareServer(t, mockGetter{
-		"/share/samba/share/": []SambaShare{
+		"/netshare/samba/share/": []SambaShare{
 			{ID: "share1", Name: "Freebox", Path: "/", ReadOnly: false},
 		},
 	})
@@ -67,7 +67,7 @@ func TestSambaShares_APIError(t *testing.T) {
 
 func TestAFPConfig_OK(t *testing.T) {
 	s := newNetshareServer(t, mockGetter{
-		"/share/afp/": AFPConfig{Enabled: false},
+		"/netshare/afp/": AFPConfig{Enabled: false},
 	})
 	result := callTool(t, s, "freebox_afp_config")
 	if result.IsError {
