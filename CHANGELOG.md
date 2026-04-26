@@ -11,6 +11,30 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.16.0] - 2026-04-27
+
+### Ajouté
+- **Switch** : `freebox_switch_port_config` — configuration d'un port LAN (activé, duplex, vitesse)
+- **Switch** : `freebox_switch_port_stats` — statistiques temps réel d'un port (débits Rx/Tx, erreurs)
+- **Système** : `freebox_system_log` — journal système Freebox (événements, niveaux, catégories)
+
+---
+
+## [0.15.0] - 2026-04-27
+
+### Ajouté
+- **DHCP** : `freebox_dhcp_config` — configuration du serveur DHCP (plage, passerelle, masque, DNS)
+- **UPnP** : `freebox_upnp_config` — état UPnP/IGD (activé/désactivé)
+- **UPnP** : `freebox_upnp_rules` — règles IGD créées automatiquement par UPnP (Plex, jeux, etc.)
+- **LCD** : `freebox_lcd_config` — état de l'écran LCD (luminosité, orientation)
+- **LCD** : `freebox_lcd_brightness` — règle la luminosité de l'écran LCD (0-100)
+
+### Modifié
+- **freebox-pair** : contacts, guide TV, enregistrements marqués `usedByMCP: true`
+- **README** : mis à jour avec les 55 outils (v0.6 → v0.14)
+
+---
+
 ## [0.14.0] - 2026-04-27
 
 ### Ajouté
@@ -237,7 +261,9 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/mipsou/mcp-freebox/compare/v0.15.0...v0.16.0
+[0.15.0]: https://github.com/mipsou/mcp-freebox/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/mipsou/mcp-freebox/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/mipsou/mcp-freebox/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/mipsou/mcp-freebox/compare/v0.11.0...v0.12.0
