@@ -9,6 +9,8 @@ package tools
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
+	"path"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -40,13 +42,28 @@ type FSTask struct {
 
 // encodeFSPath encodes an absolute Freebox path to base64url (no padding)
 // as required by the /fs/ls/ endpoint.
-func encodeFSPath(path string) string {
+func encodeFSPath(p string) string {
 	// Ensure leading slash, trim trailing slash
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
 	}
-	path = strings.TrimRight(path, "/")
-	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(path))
+	p = strings.TrimRight(p, "/")
+	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(p))
+}
+
+// sanitizeFSPath validates and cleans a filesystem path to prevent traversal attacks.
+// Returns an error if the path contains ".." components or is otherwise unsafe.
+func sanitizeFSPath(p string) (string, error) {
+	if strings.Contains(p, "..") {
+		return "", fmt.Errorf("chemin invalide : séquence '..' interdite")
+	}
+	// Clean the path (resolves redundant slashes, etc.)
+	clean := path.Clean("/" + strings.TrimLeft(p, "/"))
+	// Reject bare root
+	if clean == "/" {
+		return "", fmt.Errorf("chemin invalide : la racine '/' n'est pas un chemin de fichier valide")
+	}
+	return clean, nil
 }
 
 func registerFilesystem(s *server.MCPServer, c writer) {
@@ -59,10 +76,13 @@ func registerFilesystem(s *server.MCPServer, c writer) {
 			),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			path := req.GetString("path", "/Freebox")
-			encoded := encodeFSPath(path)
+			raw := req.GetString("path", "/Freebox")
+			p, err := sanitizeFSPath(raw)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			var entries []FSEntry
-			if err := c.Get(ctx, "/fs/ls/"+encoded, &entries); err != nil {
+			if err := c.Get(ctx, "/fs/ls/"+encodeFSPath(p), &entries); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(entries)
@@ -83,8 +103,15 @@ func registerFilesystem(s *server.MCPServer, c writer) {
 			),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			parent := req.GetString("parent", "/Freebox")
+			rawParent := req.GetString("parent", "/Freebox")
 			name := req.GetString("name", "")
+			parent, err := sanitizeFSPath(rawParent)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			if strings.ContainsAny(name, "/\\..") {
+				return mcp.NewToolResultError("nom de répertoire invalide : '/', '\\', '..' interdits"), nil
+			}
 			body := map[string]string{
 				"parent":  encodeFSPath(parent),
 				"dirname": name,
@@ -107,9 +134,13 @@ func registerFilesystem(s *server.MCPServer, c writer) {
 			),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			path := req.GetString("path", "")
+			raw := req.GetString("path", "")
+			p, err := sanitizeFSPath(raw)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			body := map[string]any{
-				"files": []string{encodeFSPath(path)},
+				"files": []string{encodeFSPath(p)},
 			}
 			var task FSTask
 			if err := c.Post(ctx, "/fs/rm/", body, &task); err != nil {

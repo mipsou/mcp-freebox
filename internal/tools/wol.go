@@ -8,10 +8,37 @@ package tools
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
+
+var (
+	macRegex      = regexp.MustCompile(`^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$`)
+	secureOnRegex = regexp.MustCompile(`^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$`)
+)
+
+func validateMAC(mac string) error {
+	if !macRegex.MatchString(mac) {
+		return fmt.Errorf("adresse MAC invalide '%s' : format attendu aa:bb:cc:dd:ee:ff", mac)
+	}
+	return nil
+}
+
+func validateSecureOn(password string) error {
+	if password == "" {
+		return nil
+	}
+	if len(password) > 17 { // "xx:xx:xx:xx:xx:xx" = 17 chars max
+		return fmt.Errorf("mot de passe SecureOn trop long : maximum 17 caractères (format xx:xx:xx:xx:xx:xx)")
+	}
+	if !secureOnRegex.MatchString(password) {
+		return fmt.Errorf("mot de passe SecureOn invalide '%s' : format attendu aa:bb:cc:dd:ee:ff", password)
+	}
+	return nil
+}
 
 // WolRequest is the body for POST /api/v4/lan/wol/{iface}/
 type WolRequest struct {
@@ -33,8 +60,14 @@ func registerWOL(s *server.MCPServer, c writer) {
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			mac := req.GetString("mac", "")
+			if err := validateMAC(mac); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			iface := req.GetString("iface", "pub")
 			password := req.GetString("password", "")
+			if err := validateSecureOn(password); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 
 			body := WolRequest{MACAddr: mac, Password: password}
 			var result any
