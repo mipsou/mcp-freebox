@@ -11,6 +11,43 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.19.0] - 2026-04-27
+
+### Sécurité — Security by Design (contraintes dans le contrat API, pas dans des couches de hardening)
+
+#### Architecture : `validate.go` — module de validation centralisé
+- Source de vérité unique pour toutes les validations d'entrée du package `tools`
+- Consolidation des validators dispersés (MAC depuis `wol.go`, SSRF depuis `downloads.go`)
+- Constantes de patterns exportées (`MACAddrPattern`, `RFC1918Pattern`, `DiskNamePattern`, `IPv4Pattern`) utilisables comme contraintes schema `mcp.Pattern()`
+
+#### `freebox_vm_create` — refonte structurelle `disk_path` → `disk_name`
+- **Avant** : l'appelant fournissait un chemin complet → validation par patch runtime
+- **Après** : l'appelant fournit uniquement le nom de fichier (`fedora.qcow2`) → le code construit `/Freebox/VMs/<nom>` en interne
+- Injection de chemin arbitraire structurellement impossible sans validator ad-hoc
+- Contrainte schema : `mcp.Pattern(DiskNamePattern)`, `mcp.Enum("qcow2", "raw")` sur `disk_type`, `mcp.Enum(...)` sur `os`
+- Contraintes numériques : `mcp.Min(64)/Max(16384)` sur `memory`, `mcp.Min(1)/Max(8)` sur `vcpus`
+
+#### `freebox_nat_create` — NAT : validation RFC1918 + ports
+- `lan_ip` : `mcp.Pattern(RFC1918Pattern)` + `validateRFC1918()` — IP publique rejetée par design
+- Ports : `mcp.Min(1)/Max(65535)` + `validatePort()` — port 0 et overflow rejetés
+- `ip_proto` : `mcp.Enum("tcp", "udp")` — protocole contraint à l'espace valide
+
+#### `freebox_dhcp_static_create` — DHCP : validation MAC + IP réservée
+- `mac` : `mcp.Pattern(MACAddrPattern)` + `validateMAC()` — format strict
+- `ip` : `mcp.Pattern(IPv4Pattern)` + `validateDHCPIP()` — derniers octets .0/.1/.254/.255 rejetés (gateway, réseau, broadcast, Freebox)
+
+#### `freebox_wol` — contraintes schema
+- `mac` : `mcp.Pattern(MACAddrPattern)` — le schéma guide le client vers le bon format
+- `password` : `mcp.MaxLength(17)` — limite déclarée dans le contrat
+
+### Tests ajoutés (26 nouveaux tests de sécurité)
+- `TestValidateRFC1918_Valid/Invalid`, `TestValidatePort_Valid/Invalid`
+- `TestNATCreate_InvalidIP`, `TestNATCreate_InvalidPort`, `TestNATCreate_OK`
+- `TestValidateDHCPIP_Valid/ReservedRejected`, `TestDHCPStaticCreate_InvalidMAC/ReservedIP/OK`
+- `TestValidateDiskName_Valid/Invalid`, `TestVMCreate_InvalidDiskName`, `TestVMCreate_DiskPathConstructed`
+
+---
+
 ## [0.18.0] - 2026-04-26
 
 ### Sécurité — Audit comité cyber (3 rôles : red team · credentials · OWASP)

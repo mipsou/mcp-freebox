@@ -15,10 +15,10 @@ import (
 
 // SambaConfig reflects GET /api/v4/share/samba/
 type SambaConfig struct {
-	Enabled       bool   `json:"enabled"`
-	LogonEnabled  bool   `json:"logon_enabled"`
-	WorkGroup     string `json:"work_group"`
-	PrinterEnabled bool  `json:"printer_enabled"`
+	Enabled        bool   `json:"enabled"`
+	LogonEnabled   bool   `json:"logon_enabled"`
+	WorkGroup      string `json:"work_group"`
+	PrinterEnabled bool   `json:"printer_enabled"`
 }
 
 // AFPConfig reflects GET /api/v4/share/afp/

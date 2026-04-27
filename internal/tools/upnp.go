@@ -21,15 +21,15 @@ type UPnPConfig struct {
 // UPnPIGDMapping reflects one entry from GET /api/v4/upnp/igd/rules/
 // An IGD rule is a port forwarding created by a UPnP client.
 type UPnPIGDMapping struct {
-	ID          int    `json:"id"`
-	Enabled     bool   `json:"enabled"`
-	ExternalIP  string `json:"ext_ip"`
-	ExternalPort int   `json:"ext_port"`
-	InternalIP  string `json:"int_ip"`
-	InternalPort int   `json:"int_port"`
-	Protocol    string `json:"proto"` // tcp | udp
-	Description string `json:"desc"`
-	Duration    int    `json:"duration"` // secondes, 0 = permanent
+	ID           int    `json:"id"`
+	Enabled      bool   `json:"enabled"`
+	ExternalIP   string `json:"ext_ip"`
+	ExternalPort int    `json:"ext_port"`
+	InternalIP   string `json:"int_ip"`
+	InternalPort int    `json:"int_port"`
+	Protocol     string `json:"proto"` // tcp | udp
+	Description  string `json:"desc"`
+	Duration     int    `json:"duration"` // secondes, 0 = permanent
 }
 
 func registerUPnP(s *server.MCPServer, c getter) {

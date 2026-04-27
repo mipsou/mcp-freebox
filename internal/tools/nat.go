@@ -48,18 +48,23 @@ func registerNAT(s *server.MCPServer, c writer) {
 			mcp.WithDescription("Crée une règle de redirection de port (port forwarding) sur la Freebox."),
 			mcp.WithString("lan_ip",
 				mcp.Required(),
-				mcp.Description("IP locale de destination (ex: 192.168.1.11)")),
+				mcp.Description("IP locale de destination — adresse RFC1918 uniquement (ex: 192.168.1.11)"),
+				mcp.Pattern(RFC1918Pattern)),
 			mcp.WithNumber("lan_port",
 				mcp.Required(),
-				mcp.Description("Port local de destination")),
+				mcp.Description("Port local de destination (1–65535)"),
+				mcp.Min(1), mcp.Max(65535)),
 			mcp.WithNumber("wan_port_start",
 				mcp.Required(),
-				mcp.Description("Port WAN de début")),
+				mcp.Description("Port WAN de début (1–65535)"),
+				mcp.Min(1), mcp.Max(65535)),
 			mcp.WithNumber("wan_port_end",
-				mcp.Description("Port WAN de fin (égal à wan_port_start si non précisé)")),
+				mcp.Description("Port WAN de fin (1–65535, égal à wan_port_start si non précisé)"),
+				mcp.Min(1), mcp.Max(65535)),
 			mcp.WithString("ip_proto",
 				mcp.Required(),
-				mcp.Description("Protocole : tcp ou udp")),
+				mcp.Description("Protocole : tcp ou udp"),
+				mcp.Enum("tcp", "udp")),
 			mcp.WithString("comment",
 				mcp.Description("Commentaire (ex: SSH CoreOS)")),
 			mcp.WithBoolean("enabled",
@@ -67,12 +72,24 @@ func registerNAT(s *server.MCPServer, c writer) {
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			lanIP := req.GetString("lan_ip", "")
+			if err := validateRFC1918(lanIP); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			lanPort := req.GetInt("lan_port", 0)
+			if err := validatePort(lanPort, "lan_port"); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			wanStart := req.GetInt("wan_port_start", 0)
+			if err := validatePort(wanStart, "wan_port_start"); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			wanEnd := wanStart
 			if args := req.GetArguments(); args != nil {
 				if v, ok := args["wan_port_end"]; ok {
 					wanEnd = int(toFloat(v))
+					if err := validatePort(wanEnd, "wan_port_end"); err != nil {
+						return mcp.NewToolResultError(err.Error()), nil
+					}
 				}
 			}
 			proto := req.GetString("ip_proto", "")

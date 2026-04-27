@@ -15,9 +15,9 @@ import (
 
 // LCDConfig reflects GET /api/v4/lcd/config/
 type LCDConfig struct {
-	Brightness     int  `json:"brightness"`     // 0-100
+	Brightness        int  `json:"brightness"` // 0-100
 	OrientationForced bool `json:"orientation_forced"`
-	Orientation    int  `json:"orientation"`    // degrés
+	Orientation       int  `json:"orientation"` // degrés
 }
 
 func registerLCD(s *server.MCPServer, c writer) {

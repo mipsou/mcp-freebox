@@ -7,14 +7,17 @@ linters:
     - staticcheck
     - ineffassign
     - unused
-    - misspell
-    - gofmt
-    - gosimple
+    # misspell removed: codebase uses French in comments/strings — false positives on valid French words
+    # gosimple merged into staticcheck in golangci-lint v2 — removed
+  settings:
+    govet:
+      enable:
+        - unsafeptr
 
-linters-settings:
-  govet:
-    enable:
-      - unsafeptr
+# golangci-lint v2: formatters are declared separately from linters
+formatters:
+  enable:
+    - gofmt
 
 issues:
   max-issues-per-linter: 50

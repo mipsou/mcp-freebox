@@ -9,48 +9,10 @@ package tools
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
-
-// allowedDownloadSchemes lists URL schemes accepted by freebox_download_add.
-// file://, gopher://, and other non-standard schemes are rejected to prevent SSRF.
-var allowedDownloadSchemes = map[string]bool{
-	"http":   true,
-	"https":  true,
-	"magnet": true,
-	"nzb":    true,
-}
-
-// validateDownloadURL checks that the URL scheme is in the allowed list and
-// that it does not target loopback or link-local addresses (SSRF prevention).
-func validateDownloadURL(raw string) error {
-	// Magnet links have a special format — allow them directly
-	if strings.HasPrefix(raw, "magnet:") {
-		return nil
-	}
-	u, err := url.Parse(raw)
-	if err != nil {
-		return fmt.Errorf("URL invalide : %w", err)
-	}
-	scheme := strings.ToLower(u.Scheme)
-	if !allowedDownloadSchemes[scheme] {
-		return fmt.Errorf("schéma URL interdit '%s' : seuls http, https, magnet, nzb sont autorisés", u.Scheme)
-	}
-	host := strings.ToLower(u.Hostname())
-	// Block SSRF targets: loopback, link-local (AWS metadata), internal RFC1918 not needed here
-	// (the Freebox handles the actual download, so we protect against accidental leaks)
-	ssrfBlocked := []string{"localhost", "127.", "0.0.0.0", "169.254.", "::1", "[::1]"}
-	for _, blocked := range ssrfBlocked {
-		if strings.HasPrefix(host, blocked) || host == blocked {
-			return fmt.Errorf("URL interdite : cible '%s' non autorisée (loopback/link-local)", host)
-		}
-	}
-	return nil
-}
 
 // Download reflects one entry from GET /api/v4/downloads/
 // status : stopped | seeding | downloading | done | error | checking | repairing | extracting | retry

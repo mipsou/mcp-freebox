@@ -17,14 +17,14 @@ import (
 // WifiBss reflects one entry from GET /api/v4/wifi/bss/
 // A BSS (Basic Service Set) is a SSID broadcast on one AP.
 type WifiBss struct {
-	ID        string    `json:"id"`
-	BSSID     string    `json:"bssid"`
-	SSID      string    `json:"ssid"`
-	Band      string    `json:"band"`
-	Enabled   bool      `json:"enabled"`
-	HideSSID  bool      `json:"hide_ssid"`
-	Encryption string   `json:"encryption"` // wpa2_psk | wpa3 | ...
-	APID      int       `json:"ap_id"`
+	ID         string `json:"id"`
+	BSSID      string `json:"bssid"`
+	SSID       string `json:"ssid"`
+	Band       string `json:"band"`
+	Enabled    bool   `json:"enabled"`
+	HideSSID   bool   `json:"hide_ssid"`
+	Encryption string `json:"encryption"` // wpa2_psk | wpa3 | ...
+	APID       int    `json:"ap_id"`
 }
 
 // WifiStation reflects one entry from GET /api/v4/wifi/stations/
@@ -33,9 +33,9 @@ type WifiStation struct {
 	MAC        string `json:"mac"`
 	BSSID      string `json:"bssid"`
 	Band       string `json:"band"`
-	Signal     int    `json:"signal"`     // dBm
-	RxRate     int    `json:"rx_rate"`    // kbps
-	TxRate     int    `json:"tx_rate"`    // kbps
+	Signal     int    `json:"signal"`  // dBm
+	RxRate     int    `json:"rx_rate"` // kbps
+	TxRate     int    `json:"tx_rate"` // kbps
 	Authorized bool   `json:"authorized"`
 	Active     bool   `json:"active"`
 }

@@ -24,13 +24,13 @@ func newSystemServer(t *testing.T, mock mockGetter) *server.MCPServer {
 func TestSystem_OK(t *testing.T) {
 	s := newSystemServer(t, mockGetter{
 		"/system/": SystemInfo{
-			MAC:             "68:a3:78:00:00:01",
-			Serial:          "6312345678",
-			Uptime:          "2 days 3 hours",
-			UptimeVal:       183600,
-			BoardName:       "delta",
-			FirmwareVersion: "4.8.8",
-			DiskStatus:      "active",
+			MAC:              "68:a3:78:00:00:01",
+			Serial:           "6312345678",
+			Uptime:           "2 days 3 hours",
+			UptimeVal:        183600,
+			BoardName:        "delta",
+			FirmwareVersion:  "4.8.8",
+			DiskStatus:       "active",
 			BoxAuthenticated: true,
 			Sensors: []SystemSensor{
 				{ID: "temp_cpu", Name: "Température CPU", Value: 58},
