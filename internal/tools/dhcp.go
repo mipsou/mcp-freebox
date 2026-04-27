@@ -68,10 +68,12 @@ func registerDHCP(s *server.MCPServer, c writer) {
 			mcp.WithDescription("Crée une réservation DHCP statique (MAC → IP fixe). L'équipement obtiendra toujours la même IP."),
 			mcp.WithString("mac",
 				mcp.Required(),
-				mcp.Description("Adresse MAC (ex: aa:bb:cc:dd:ee:ff)")),
+				mcp.Description("Adresse MAC (ex: aa:bb:cc:dd:ee:ff)"),
+				mcp.Pattern(MACAddrPattern)),
 			mcp.WithString("ip",
 				mcp.Required(),
-				mcp.Description("IP à réserver (ex: 192.168.100.50)")),
+				mcp.Description("IP à réserver — ne pas utiliser .0, .1, .254, .255 (ex: 192.168.100.50)"),
+				mcp.Pattern(IPv4Pattern)),
 			mcp.WithString("hostname",
 				mcp.Description("Nom d'hôte (optionnel)")),
 			mcp.WithString("comment",
@@ -79,7 +81,13 @@ func registerDHCP(s *server.MCPServer, c writer) {
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			mac := req.GetString("mac", "")
+			if err := validateMAC(mac); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			ip := req.GetString("ip", "")
+			if err := validateDHCPIP(ip); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			hostname := req.GetString("hostname", "")
 			comment := req.GetString("comment", "")
 			body := DhcpStaticLease{Mac: mac, IP: ip, Hostname: hostname, Comment: comment}

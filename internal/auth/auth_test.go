@@ -50,12 +50,12 @@ func TestRefresh(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v4/login/":
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"success": true,
 				"result":  map[string]any{"logged_in": false, "challenge": challenge},
 			})
 		case "/api/v4/login/session/":
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"success": true,
 				"result":  map[string]any{"session_token": sessionToken},
 			})

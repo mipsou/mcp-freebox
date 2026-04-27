@@ -110,7 +110,7 @@ func (m *Manager) getChallenge() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 
@@ -143,7 +143,7 @@ func (m *Manager) openSession(password string) (token string, ttl int, err error
 	if err != nil {
 		return "", 0, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 

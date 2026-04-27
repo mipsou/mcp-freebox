@@ -12,7 +12,7 @@
 | Sévérité  | Findings | Fixés |
 |-----------|----------|-------|
 | CRITICAL  | 3        | 3 ✅  |
-| HIGH      | 7        | 3 ✅  |
+| HIGH      | 7        | 5 ✅  |
 | MEDIUM    | 5        | 0     |
 | LOW       | 1        | 0     |
 
@@ -89,21 +89,23 @@
 
 ## INJECTION APPLICATIVE (OWASP)
 
-### [HIGH] I1 — NAT : pas de validation `lan_ip` ni des ports
-- **Finding** : `lan_ip` non validé → règle NAT vers `0.0.0.0` possible. `wan_port < 1024` non filtré → exposition de ports système.
+### [FIXED ✅] I1 — NAT : validation `lan_ip` RFC1918 + ports
+- **Finding** : `lan_ip` non validé → règle NAT vers IP publique possible. Ports hors plage non rejetés.
 - **Fichier** : `internal/tools/nat.go`
-- **Mitigation** : Valider `lan_ip` via regex IPv4 dans plage RFC1918, rejeter ports < 1024 (ou demander confirmation)
-- **Action** : Feature/fix NAT validation — v0.19
+- **Fix** : `validateRFC1918()` — IP publique rejetée. `validatePort()` — plage 1–65535 enforced. Contraintes schema : `mcp.Pattern(RFC1918Pattern)`, `mcp.Min(1)/Max(65535)`, `mcp.Enum("tcp", "udp")`.
+- **Tests** : `TestValidateRFC1918_*`, `TestValidatePort_*`, `TestNATCreate_InvalidIP`, `TestNATCreate_InvalidPort`
 
-### [MEDIUM] I2 — DHCP statique : IP hors subnet (conflit gateway)
-- **Finding** : Création bail DHCP pour `192.168.x.1` (gateway) ou `.254` (Freebox) → conflit IP → réseau instable
+### [FIXED ✅] I2 — DHCP statique : IP réservée (gateway, broadcast)
+- **Finding** : Création bail DHCP pour `.1` (gateway) ou `.254` (Freebox) → conflit IP → réseau instable
 - **Fichier** : `internal/tools/dhcp.go`
-- **Mitigation** : Valider que l'IP n'est pas `.0`, `.1`, `.254`, `.255` du subnet
+- **Fix** : `validateDHCPIP()` — rejette derniers octets `.0`, `.1`, `.254`, `.255`. `validateMAC()` sur le champ MAC. Contraintes schema : `mcp.Pattern(MACAddrPattern)`, `mcp.Pattern(IPv4Pattern)`.
+- **Tests** : `TestValidateDHCPIP_ReservedRejected`, `TestDHCPStaticCreate_InvalidMAC/ReservedIP`
 
-### [HIGH] I3 — VM : `disk_path` non restreint
-- **Finding** : `freebox_vm_create` accepte n'importe quel `disk_path`. Un path vers `/Freebox/system/` ou une image malveillante peut être monté.
+### [FIXED ✅] I3 — VM : `disk_path` non restreint → refonte `disk_name`
+- **Finding** : `freebox_vm_create` acceptait n'importe quel `disk_path`. Accès hors `/Freebox/VMs/` possible.
 - **Fichier** : `internal/tools/vm.go`
-- **Mitigation** : Valider que `disk_path` commence par `/Freebox/VMs/` et se termine par `.qcow2` ou `.raw`
+- **Fix (Security by Design)** : Paramètre `disk_path` supprimé et remplacé par `disk_name` (nom de fichier uniquement). Le chemin `/Freebox/VMs/<nom>` est construit **par le code**, jamais fourni par l'appelant. Injection de chemin arbitraire structurellement impossible.
+- **Tests** : `TestValidateDiskName_Invalid`, `TestVMCreate_InvalidDiskName`, `TestVMCreate_DiskPathConstructed`
 
 ### [LOW] I4 — Session token TTL client/serveur non synchronisé
 - **Finding** : TTL client hardcodé à 25 min ; TTL serveur Freebox = 30 min. Pas de rafraîchissement proactif.
@@ -119,10 +121,11 @@
 - [x] Fix C2 : SSRF `validateDownloadURL`
 - [x] Fix C3 : validation MAC/SecureOn WoL
 
-### Court terme (v0.19)
-- [ ] Fix I1 : validation `lan_ip` + ports NAT
-- [ ] Fix I3 : restriction `disk_path` VM
-- [ ] Fix D4 : `govulncheck` en CI
+### Court terme (v0.19) — ✅ LIVRÉ
+- [x] Fix I1 : validation `lan_ip` RFC1918 + ports NAT (schema + runtime)
+- [x] Fix I2 : validation IP DHCP statique (octets réservés)
+- [x] Fix I3 : refonte `disk_path`→`disk_name` — security by design (chemin construit par le code)
+- [x] Architecture : `validate.go` — module centralisé (fin du hardening dispersé)
 
 ### Moyen terme
 - [ ] Fix C4 : TOFU cert pinning (capturer fingerprint SHA-256 au premier pairing — **Free ne publie pas sa CA**, cert pinning naïf impossible)

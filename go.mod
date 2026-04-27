@@ -1,6 +1,6 @@
 module github.com/mipsou/mcp-freebox
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/mark3labs/mcp-go v0.49.0

@@ -15,8 +15,8 @@ import (
 
 // AirMediaConfig reflects GET /api/v4/airmedia/config/
 type AirMediaConfig struct {
-	Enabled           bool   `json:"enabled"`
-	Password          string `json:"password"`
+	Enabled  bool   `json:"enabled"`
+	Password string `json:"password"`
 }
 
 // AirMediaReceiver reflects one entry from GET /api/v4/airmedia/receivers/

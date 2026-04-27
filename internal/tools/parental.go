@@ -15,8 +15,8 @@ import (
 
 // ParentalConfig reflects GET /api/v4/parental/config/
 type ParentalConfig struct {
-	Enabled        bool   `json:"enabled"`
-	DefaultPolicy  string `json:"default_policy"`  // allow | deny
+	Enabled       bool   `json:"enabled"`
+	DefaultPolicy string `json:"default_policy"` // allow | deny
 }
 
 // ParentalPlanning reflects one entry from GET /api/v4/parental/planning/

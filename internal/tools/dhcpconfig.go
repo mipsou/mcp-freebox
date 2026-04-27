@@ -15,13 +15,13 @@ import (
 
 // DHCPConfig reflects GET /api/v4/dhcp/config/
 type DHCPConfig struct {
-	Enabled       bool   `json:"enabled"`
-	GatewayIP     string `json:"gateway"`
-	NetmaskIP     string `json:"netmask"`
-	IPRangeStart  string `json:"ip_range_start"`
-	IPRangeEnd    string `json:"ip_range_end"`
-	DNSServers    []string `json:"dns"`
-	AlwaysBroadcast bool  `json:"always_broadcast"`
+	Enabled         bool     `json:"enabled"`
+	GatewayIP       string   `json:"gateway"`
+	NetmaskIP       string   `json:"netmask"`
+	IPRangeStart    string   `json:"ip_range_start"`
+	IPRangeEnd      string   `json:"ip_range_end"`
+	DNSServers      []string `json:"dns"`
+	AlwaysBroadcast bool     `json:"always_broadcast"`
 }
 
 func registerDHCPConfig(s *server.MCPServer, c getter) {

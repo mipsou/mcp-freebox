@@ -1,5 +1,11 @@
 name: CI
 
+# Security: GITHUB_TOKEN is read-only by default (workflow level).
+# Jobs that need elevated permissions declare them explicitly (least privilege).
+# Actions pinned to commit SHAs — supply chain protection (verified via zizmor).
+permissions:
+  contents: read
+
 on:
   push:
     branches: ["**"]
@@ -12,12 +18,20 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
           go-version-file: go.mod
+          cache: true
+
+      - name: Verify modules
+        # go mod verify checks that downloaded modules match go.sum checksums.
+        # Detects tampered or corrupted module caches before any build or test.
+        run: go mod verify
 
       - name: go vet
         run: go vet ./...
@@ -29,8 +43,9 @@ jobs:
         run: go build -o freebox-mcp.exe ./cmd/freebox-mcp
 
       - name: govulncheck
+        # Pinned to explicit version — @latest is a supply chain risk.
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           govulncheck ./...
 
   lint:
@@ -38,15 +53,48 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
           go-version-file: go.mod
+          cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
-          version: latest
+          version: v2.9.0  # first version with Go 1.26 support (released 2026-02-10)
           args: --timeout=3m
+
+  pipeline-security:
+    name: Pipeline Security (zizmor + actionlint)
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: read         # zizmor — fetches action metadata for online audits
+      security-events: write # zizmor — uploads SARIF to GitHub Advanced Security tab
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: zizmor
+        # Static analysis for GitHub Actions workflows.
+        # Detects: template injection, unpinned actions, excessive permissions,
+        # credential exposure, dangerous action patterns — 30+ audit rules.
+        # SHA-pinned (v0.5.3) — zizmor is one of the few actions with SHA examples in docs.
+        uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
+        with:
+          advanced-security: false  # requires GitHub Advanced Security (paid) — disabled for private repo
+          annotations: true         # findings shown as PR annotations instead
+          # persona: pedantic       # uncomment to also flag missing SHA pins
+
+      - name: actionlint
+        # Type-checks ${{ }} expressions, validates action inputs/outputs,
+        # detects script injection via untrusted inputs, shellcheck on run: steps.
+        uses: devops-actions/actionlint@469810fd82c015d3c43815cd2b0e4d02eecc4819 # v0.1.11
