@@ -8,12 +8,16 @@ linters:
     - ineffassign
     - unused
     - misspell
-    - gofmt
     - gosimple
   settings:
     govet:
       enable:
         - unsafeptr
+
+# golangci-lint v2: formatters are declared separately from linters
+formatters:
+  enable:
+    - gofmt
 
 issues:
   max-issues-per-linter: 50
