@@ -41,10 +41,10 @@ type credentialW struct {
 }
 
 var (
-	advapi32   = syscall.NewLazyDLL("advapi32.dll")
-	credReadW  = advapi32.NewProc("CredReadW")
-	credWriteW = advapi32.NewProc("CredWriteW")
-	credFree   = advapi32.NewProc("CredFree")
+	advapi32    = syscall.NewLazyDLL("advapi32.dll")
+	credReadW   = advapi32.NewProc("CredReadW")
+	credWriteW  = advapi32.NewProc("CredWriteW")
+	credFree    = advapi32.NewProc("CredFree")
 	credDeleteW = advapi32.NewProc("CredDeleteW")
 )
 

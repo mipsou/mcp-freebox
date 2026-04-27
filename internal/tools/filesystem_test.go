@@ -27,7 +27,7 @@ func TestEncodeFSPath(t *testing.T) {
 		want  string
 	}{
 		{"/Freebox/VMs", encodeFSPath("/Freebox/VMs")},
-		{"Freebox/VMs", encodeFSPath("/Freebox/VMs")}, // leading slash added
+		{"Freebox/VMs", encodeFSPath("/Freebox/VMs")},   // leading slash added
 		{"/Freebox/VMs/", encodeFSPath("/Freebox/VMs")}, // trailing slash trimmed
 	}
 	for _, tc := range cases {

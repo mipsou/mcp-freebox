@@ -48,7 +48,7 @@ func Discover(ctx context.Context) (*FreeboxInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("mdns: listen: %w", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	conn.SetDeadline(deadline) //nolint:errcheck
 
 	// Send PTR query for _fbx-api._tcp.local.

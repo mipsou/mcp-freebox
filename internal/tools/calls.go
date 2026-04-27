@@ -21,9 +21,9 @@ type CallEntry struct {
 	Type      string `json:"type"`
 	Number    string `json:"number"`
 	Name      string `json:"name"`
-	Duration  int    `json:"duration"`  // secondes
-	Timestamp int64  `json:"datetime"`  // Unix timestamp
-	New       bool   `json:"new"`       // non lu
+	Duration  int    `json:"duration"` // secondes
+	Timestamp int64  `json:"datetime"` // Unix timestamp
+	New       bool   `json:"new"`      // non lu
 }
 
 func registerCalls(s *server.MCPServer, c getter) {

@@ -27,17 +27,17 @@ func newTestClient(t *testing.T, path string, payload any) (*Client, *httptest.S
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v4/login/":
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"success": true,
 				"result":  map[string]any{"logged_in": false, "challenge": "ch"},
 			})
 		case "/api/v4/login/session/":
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"success": true,
 				"result":  map[string]any{"session_token": "test-tok"},
 			})
 		case path:
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"success": true,
 				"result":  payload,
 			})
@@ -69,17 +69,17 @@ func TestAPIError(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v4/login/":
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"success": true,
 				"result":  map[string]any{"logged_in": false, "challenge": "ch"},
 			})
 		case "/api/v4/login/session/":
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"success": true,
 				"result":  map[string]any{"session_token": "test-tok"},
 			})
 		default:
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"success":    false,
 				"msg":        "permission denied",
 				"error_code": "insufficient_rights",

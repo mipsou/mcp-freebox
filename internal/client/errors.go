@@ -20,8 +20,8 @@ func (e *APIError) Error() string {
 
 // apiResponse is the generic Freebox OS API envelope.
 type apiResponse[T any] struct {
-	Success   bool      `json:"success"`
-	Msg       string    `json:"msg,omitempty"`
-	ErrorCode string    `json:"error_code,omitempty"`
-	Result    T         `json:"result,omitempty"`
+	Success   bool   `json:"success"`
+	Msg       string `json:"msg,omitempty"`
+	ErrorCode string `json:"error_code,omitempty"`
+	Result    T      `json:"result,omitempty"`
 }
