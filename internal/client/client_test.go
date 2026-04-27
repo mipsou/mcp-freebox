@@ -16,9 +16,6 @@ import (
 	"github.com/mipsou/mcp-freebox/internal/auth"
 )
 
-// stubAuth returns a fixed token without hitting any server.
-type stubAuth string
-
 // newTestClient builds a Client backed by a test server that always
 // returns the provided payload as {"success":true,"result":<payload>}.
 func newTestClient(t *testing.T, path string, payload any) (*Client, *httptest.Server) {
