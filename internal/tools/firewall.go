@@ -15,14 +15,14 @@ import (
 
 // FirewallIncomingRule reflects one entry from GET /api/v4/fw/incoming/
 type FirewallIncomingRule struct {
-	ID       int    `json:"id"`
-	Enabled  bool   `json:"enabled"`
-	Comment  string `json:"comment"`
-	Action   string `json:"action"`    // accept, deny, drop
-	IPProto  string `json:"ip_proto"`  // tcp, udp, icmp, all
-	SrcIP    string `json:"src_ip"`    // source IP/CIDR, "" = any
-	DstPort  int    `json:"dst_port"`  // destination port, 0 = any
-	SrcPort  int    `json:"src_port"`  // source port, 0 = any
+	ID      int    `json:"id"`
+	Enabled bool   `json:"enabled"`
+	Comment string `json:"comment"`
+	Action  string `json:"action"`   // accept, deny, drop
+	IPProto string `json:"ip_proto"` // tcp, udp, icmp, all
+	SrcIP   string `json:"src_ip"`   // source IP/CIDR, "" = any
+	DstPort int    `json:"dst_port"` // destination port, 0 = any
+	SrcPort int    `json:"src_port"` // source port, 0 = any
 }
 
 // DMZConfig reflects GET /api/v4/fw/dmz/

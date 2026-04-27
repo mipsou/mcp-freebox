@@ -23,8 +23,8 @@ type SwitchMacEntry struct {
 type SwitchPortStatus struct {
 	ID      int              `json:"id"`
 	Link    bool             `json:"link"`
-	Speed   string           `json:"speed"`   // "10", "100", "1000" (Mbps)
-	Duplex  string           `json:"duplex"`  // "full", "half"
+	Speed   string           `json:"speed"`  // "10", "100", "1000" (Mbps)
+	Duplex  string           `json:"duplex"` // "full", "half"
 	MacList []SwitchMacEntry `json:"mac_list"`
 }
 

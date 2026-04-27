@@ -1,0 +1,14 @@
+# Normalize line endings to LF in the repository.
+# gofmt outputs LF; storing CRLF causes false "not properly formatted" failures on Windows CI.
+* text=auto eol=lf
+*.go text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+
+# Binary files — never touch line endings
+*.exe binary
+*.zip binary
+*.png binary

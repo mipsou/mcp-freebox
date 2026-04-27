@@ -15,14 +15,14 @@ import (
 
 // ConnectionConfig reflects GET /api/v4/connection/config/
 type ConnectionConfig struct {
-	Ping               bool   `json:"ping"`
-	IsSecurePass       bool   `json:"is_secure_pass"`
-	RemoteAccess       bool   `json:"remote_access"`
-	RemoteAccessPort   int    `json:"remote_access_port"`
-	RemoteAccessIP     string `json:"remote_access_ip"`
-	WakeOnLanPort      int    `json:"wol_port"`
-	AdblockEnabled     bool   `json:"adblock_enabled"`
-	AdblockMode        string `json:"adblock_mode"`
+	Ping             bool   `json:"ping"`
+	IsSecurePass     bool   `json:"is_secure_pass"`
+	RemoteAccess     bool   `json:"remote_access"`
+	RemoteAccessPort int    `json:"remote_access_port"`
+	RemoteAccessIP   string `json:"remote_access_ip"`
+	WakeOnLanPort    int    `json:"wol_port"`
+	AdblockEnabled   bool   `json:"adblock_enabled"`
+	AdblockMode      string `json:"adblock_mode"`
 }
 
 func registerConnectionConfig(s *server.MCPServer, c getter) {

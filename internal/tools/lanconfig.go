@@ -16,23 +16,23 @@ import (
 
 // LanConfig reflects GET /api/v4/lan/config/
 type LanConfig struct {
-	IP           string `json:"ip"`
-	Mask         string `json:"netmask"`
-	NameDNS      string `json:"name_dns"`
-	NameMDNS     string `json:"name_mdns"`
-	NameNetbios  string `json:"name_netbios"`
-	Mode         string `json:"mode"` // router | bridge
+	IP          string `json:"ip"`
+	Mask        string `json:"netmask"`
+	NameDNS     string `json:"name_dns"`
+	NameMDNS    string `json:"name_mdns"`
+	NameNetbios string `json:"name_netbios"`
+	Mode        string `json:"mode"` // router | bridge
 }
 
 // LanHostName reflects one entry from GET /api/v4/lan/browser/pub/{mac}/
 type LanHostName struct {
-	ID       string `json:"id"`
-	Name     string `json:"primary_name"`
-	MAC      string `json:"l2ident"`
-	IP4      string `json:"ip4"`
-	IP6      string `json:"ip6"`
+	ID        string `json:"id"`
+	Name      string `json:"primary_name"`
+	MAC       string `json:"l2ident"`
+	IP4       string `json:"ip4"`
+	IP6       string `json:"ip6"`
 	Reachable bool   `json:"reachable"`
-	Active   bool   `json:"active"`
+	Active    bool   `json:"active"`
 }
 
 // LanHostUpdate is the body for PUT /api/v4/lan/browser/pub/{id}

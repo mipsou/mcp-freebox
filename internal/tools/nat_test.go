@@ -60,10 +60,10 @@ func TestValidateRFC1918_Valid(t *testing.T) {
 
 func TestValidateRFC1918_Invalid(t *testing.T) {
 	cases := []string{
-		"8.8.8.8",        // public IP
-		"1.2.3.4",        // public IP
-		"172.15.0.1",     // just outside range
-		"172.32.0.1",     // just outside range
+		"8.8.8.8",    // public IP
+		"1.2.3.4",    // public IP
+		"172.15.0.1", // just outside range
+		"172.32.0.1", // just outside range
 		"not-an-ip",
 		"",
 	}

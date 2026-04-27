@@ -7,7 +7,7 @@ linters:
     - staticcheck
     - ineffassign
     - unused
-    - misspell
+    # misspell removed: codebase uses French in comments/strings — false positives on valid French words
     # gosimple merged into staticcheck in golangci-lint v2 — removed
   settings:
     govet:

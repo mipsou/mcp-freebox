@@ -25,8 +25,8 @@ func TestWifiAps_OK(t *testing.T) {
 	s := newWifiServer(t, mockGetter{
 		"/wifi/ap/": []WifiAp{
 			{
-				ID:   0,
-				Name: "Freebox WiFi",
+				ID:     0,
+				Name:   "Freebox WiFi",
 				Status: WifiApStatus{State: "active", PrimaryChannel: 36, ChannelWidth: "80"},
 				Config: WifiApConfig{Band: "5g", Enabled: true, Dfs: true},
 			},

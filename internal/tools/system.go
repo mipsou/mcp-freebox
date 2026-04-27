@@ -29,16 +29,16 @@ type SystemFan struct {
 
 // SystemInfo reflects GET /api/v4/system/
 type SystemInfo struct {
-	MAC             string         `json:"mac"`
-	Serial          string         `json:"serial"`
-	Uptime          string         `json:"uptime"`
-	UptimeVal       int64          `json:"uptime_val"` // seconds
-	BoardName       string         `json:"board_name"`
-	FirmwareVersion string         `json:"firmware_version"`
-	DiskStatus      string         `json:"disk_status"`
-	BoxAuthenticated bool          `json:"box_authenticated"`
-	Sensors         []SystemSensor `json:"sensors"`
-	Fans            []SystemFan    `json:"fans"`
+	MAC              string         `json:"mac"`
+	Serial           string         `json:"serial"`
+	Uptime           string         `json:"uptime"`
+	UptimeVal        int64          `json:"uptime_val"` // seconds
+	BoardName        string         `json:"board_name"`
+	FirmwareVersion  string         `json:"firmware_version"`
+	DiskStatus       string         `json:"disk_status"`
+	BoxAuthenticated bool           `json:"box_authenticated"`
+	Sensors          []SystemSensor `json:"sensors"`
+	Fans             []SystemFan    `json:"fans"`
 }
 
 func registerSystem(s *server.MCPServer, c getter) {
