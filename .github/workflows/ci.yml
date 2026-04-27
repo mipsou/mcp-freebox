@@ -62,7 +62,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6.5.2
         with:
-          version: v1.64.8
+          version: v2.9.0  # first version with Go 1.26 support (released 2026-02-10)
           args: --timeout=3m
 
   pipeline-security:
@@ -84,7 +84,8 @@ jobs:
         # SHA-pinned (v0.5.3) — zizmor is one of the few actions with SHA examples in docs.
         uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
         with:
-          advanced-security: true  # upload findings to GitHub Security tab (SARIF)
+          advanced-security: false  # requires GitHub Advanced Security (paid) — disabled for private repo
+          annotations: true         # findings shown as PR annotations instead
           # persona: pedantic       # uncomment to also flag missing SHA pins
 
       - name: actionlint
