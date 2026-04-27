@@ -8,7 +8,7 @@ linters:
     - ineffassign
     - unused
     - misspell
-    - gosimple
+    # gosimple merged into staticcheck in golangci-lint v2 — removed
   settings:
     govet:
       enable:
