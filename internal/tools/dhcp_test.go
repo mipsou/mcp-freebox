@@ -66,3 +66,60 @@ func TestDhcpLeases_APIError(t *testing.T) {
 		t.Error("expected tool error result")
 	}
 }
+
+// ── Sécurité : validation MAC et IP DHCP ──────────────────────────────────────
+
+func TestValidateDHCPIP_Valid(t *testing.T) {
+	cases := []string{"192.168.1.50", "192.168.1.100", "10.0.0.10", "172.16.0.5"}
+	for _, ip := range cases {
+		if err := validateDHCPIP(ip); err != nil {
+			t.Errorf("validateDHCPIP(%q) unexpected error: %v", ip, err)
+		}
+	}
+}
+
+func TestValidateDHCPIP_ReservedRejected(t *testing.T) {
+	cases := []string{
+		"192.168.1.0",   // réseau
+		"192.168.1.1",   // gateway
+		"192.168.1.254", // Freebox
+		"192.168.1.255", // broadcast
+	}
+	for _, ip := range cases {
+		if err := validateDHCPIP(ip); err == nil {
+			t.Errorf("validateDHCPIP(%q) should have returned error", ip)
+		}
+	}
+}
+
+func TestDHCPStaticCreate_InvalidMAC(t *testing.T) {
+	s := newDHCPServer(t, mockGetter{})
+	result := callToolWithArgs(t, s, "freebox_dhcp_static_create", map[string]any{
+		"mac": "not-a-mac", "ip": "192.168.1.50",
+	})
+	if !result.IsError {
+		t.Error("invalid MAC should return error")
+	}
+}
+
+func TestDHCPStaticCreate_ReservedIP(t *testing.T) {
+	s := newDHCPServer(t, mockGetter{})
+	result := callToolWithArgs(t, s, "freebox_dhcp_static_create", map[string]any{
+		"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.1.254",
+	})
+	if !result.IsError {
+		t.Error("reserved IP (.254) should return error")
+	}
+}
+
+func TestDHCPStaticCreate_OK(t *testing.T) {
+	s := newDHCPServer(t, mockGetter{
+		"/dhcp/static_lease/": DhcpStaticLease{Mac: "aa:bb:cc:dd:ee:ff", IP: "192.168.1.50", Hostname: "mypc"},
+	})
+	result := callToolWithArgs(t, s, "freebox_dhcp_static_create", map[string]any{
+		"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.1.50", "hostname": "mypc",
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+}

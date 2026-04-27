@@ -64,8 +64,12 @@ func registerDownloads(s *server.MCPServer, c writer) {
 				mcp.Description("Répertoire de destination (chemin sur le NAS Freebox, optionnel)")),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			rawURL := req.GetString("url", "")
+			if err := validateDownloadURL(rawURL); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			body := DownloadAdd{
-				DownloadURL: req.GetString("url", ""),
+				DownloadURL: rawURL,
 				DownloadDir: req.GetString("download_dir", ""),
 			}
 			var created Download

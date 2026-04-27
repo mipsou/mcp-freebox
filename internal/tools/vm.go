@@ -100,24 +100,29 @@ func registerVM(s *server.MCPServer, c writer) {
 	// ── Créer ────────────────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_vm_create",
-			mcp.WithDescription("Crée une nouvelle machine virtuelle sur la Freebox."),
+			mcp.WithDescription("Crée une nouvelle machine virtuelle sur la Freebox. Le disque doit se trouver dans /Freebox/VMs/."),
 			mcp.WithString("name",
 				mcp.Required(),
 				mcp.Description("Nom de la VM")),
 			mcp.WithNumber("memory",
 				mcp.Required(),
-				mcp.Description("Mémoire allouée en Mo (ex: 2048)")),
+				mcp.Description("Mémoire allouée en Mo (ex: 2048)"),
+				mcp.Min(64), mcp.Max(16384)),
 			mcp.WithNumber("vcpus",
 				mcp.Required(),
-				mcp.Description("Nombre de vCPUs")),
-			mcp.WithString("disk_path",
+				mcp.Description("Nombre de vCPUs (1–8)"),
+				mcp.Min(1), mcp.Max(8)),
+			mcp.WithString("disk_name",
 				mcp.Required(),
-				mcp.Description("Chemin du disque sur le stockage Freebox (ex: Freebox/VMs/disk.qcow2)")),
+				mcp.Description("Nom du fichier disque sous /Freebox/VMs/ (ex: fedora.qcow2, debian.raw) — extension .qcow2 ou .raw obligatoire"),
+				mcp.Pattern(DiskNamePattern)),
 			mcp.WithString("disk_type",
 				mcp.Required(),
-				mcp.Description("Type de disque : raw ou qcow2")),
+				mcp.Description("Type de disque : raw ou qcow2"),
+				mcp.Enum("qcow2", "raw")),
 			mcp.WithString("os",
-				mcp.Description("OS invité : fedora, debian, ubuntu, unknown (défaut: unknown)")),
+				mcp.Description("OS invité : fedora, debian, ubuntu, unknown (défaut: unknown)"),
+				mcp.Enum("fedora", "debian", "ubuntu", "unknown")),
 			mcp.WithBoolean("enable_screen",
 				mcp.Description("Activer l'écran virtuel VNC (défaut: false)")),
 		),
@@ -125,7 +130,13 @@ func registerVM(s *server.MCPServer, c writer) {
 			name := req.GetString("name", "")
 			memory := req.GetInt("memory", 0)
 			vcpus := req.GetInt("vcpus", 0)
-			diskPath := req.GetString("disk_path", "")
+			diskName := req.GetString("disk_name", "")
+			if err := validateDiskName(diskName); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			// Security by design: path prefix is always /Freebox/VMs/ — the caller
+			// provides only the filename, never the directory.
+			diskPath := "/Freebox/VMs/" + diskName
 			diskType := req.GetString("disk_type", "")
 			osName := req.GetString("os", "unknown")
 			enableScreen := req.GetBool("enable_screen", false)

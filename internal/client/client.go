@@ -20,10 +20,10 @@ import (
 
 // Client wraps authenticated HTTP calls to the Freebox OS API.
 type Client struct {
-	baseURL      string
-	discoverURL  string
-	auth         *auth.Manager
-	http         *http.Client
+	baseURL     string
+	discoverURL string
+	auth        *auth.Manager
+	http        *http.Client
 }
 
 func New(baseURL, discoverURL string, auth *auth.Manager, http *http.Client) *Client {
@@ -61,7 +61,7 @@ func (c *Client) DiscoverAPI(ctx context.Context, dst any) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func (c *Client) attempt(ctx context.Context, method, path string, bodyBytes []b
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -25,16 +25,24 @@ func registerWOL(s *server.MCPServer, c writer) {
 			mcp.WithDescription("Envoie un paquet Wake-on-LAN (magic packet) à un équipement du réseau local via son adresse MAC. Utile pour démarrer un NAS ou un PC à distance."),
 			mcp.WithString("mac",
 				mcp.Required(),
-				mcp.Description("Adresse MAC de l'équipement à réveiller (ex: aa:bb:cc:dd:ee:ff)")),
+				mcp.Description("Adresse MAC de l'équipement à réveiller (ex: aa:bb:cc:dd:ee:ff)"),
+				mcp.Pattern(MACAddrPattern)),
 			mcp.WithString("iface",
 				mcp.Description("Interface réseau (défaut: pub — interface LAN principale)")),
 			mcp.WithString("password",
-				mcp.Description("Mot de passe SecureOn optionnel (6 octets hex, ex: 00:11:22:33:44:55)")),
+				mcp.Description("Mot de passe SecureOn optionnel (6 octets hex, ex: 00:11:22:33:44:55)"),
+				mcp.MaxLength(17)),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			mac := req.GetString("mac", "")
+			if err := validateMAC(mac); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			iface := req.GetString("iface", "pub")
 			password := req.GetString("password", "")
+			if err := validateSecureOn(password); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 
 			body := WolRequest{MACAddr: mac, Password: password}
 			var result any

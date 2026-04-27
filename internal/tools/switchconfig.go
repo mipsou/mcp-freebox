@@ -16,15 +16,15 @@ import (
 
 // SwitchPortConfig reflects GET /api/v4/switch/port/{id}/config/
 type SwitchPortConfig struct {
-	ID          int    `json:"id"`
-	Enabled     bool   `json:"enabled"`
-	DuplexMode  string `json:"duplex"` // auto | full | half
-	SpeedMode   string `json:"speed"`  // auto | 10 | 100 | 1000
+	ID         int    `json:"id"`
+	Enabled    bool   `json:"enabled"`
+	DuplexMode string `json:"duplex"` // auto | full | half
+	SpeedMode  string `json:"speed"`  // auto | 10 | 100 | 1000
 }
 
 // SwitchStats reflects GET /api/v4/switch/port/{id}/stats/
 type SwitchStats struct {
-	PortID    int   `json:"port_id"`
+	PortID      int   `json:"port_id"`
 	RxBytesRate int64 `json:"rx_bytes_rate"`
 	TxBytesRate int64 `json:"tx_bytes_rate"`
 	RxBroadcast int64 `json:"rx_broadcast"`
@@ -33,7 +33,7 @@ type SwitchStats struct {
 	TxErrors    int64 `json:"tx_errors"`
 }
 
-func registerSwitchConfig(s *server.MCPServer, c writer) {
+func registerSwitchConfig(s *server.MCPServer, c getter) {
 	// ── Config d'un port ──────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_switch_port_config",

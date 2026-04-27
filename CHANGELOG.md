@@ -11,6 +11,77 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
+## [0.19.0] - 2026-04-27
+
+### Sécurité — Security by Design (contraintes dans le contrat API, pas dans des couches de hardening)
+
+#### Architecture : `validate.go` — module de validation centralisé
+- Source de vérité unique pour toutes les validations d'entrée du package `tools`
+- Consolidation des validators dispersés (MAC depuis `wol.go`, SSRF depuis `downloads.go`)
+- Constantes de patterns exportées (`MACAddrPattern`, `RFC1918Pattern`, `DiskNamePattern`, `IPv4Pattern`) utilisables comme contraintes schema `mcp.Pattern()`
+
+#### `freebox_vm_create` — refonte structurelle `disk_path` → `disk_name`
+- **Avant** : l'appelant fournissait un chemin complet → validation par patch runtime
+- **Après** : l'appelant fournit uniquement le nom de fichier (`fedora.qcow2`) → le code construit `/Freebox/VMs/<nom>` en interne
+- Injection de chemin arbitraire structurellement impossible sans validator ad-hoc
+- Contrainte schema : `mcp.Pattern(DiskNamePattern)`, `mcp.Enum("qcow2", "raw")` sur `disk_type`, `mcp.Enum(...)` sur `os`
+- Contraintes numériques : `mcp.Min(64)/Max(16384)` sur `memory`, `mcp.Min(1)/Max(8)` sur `vcpus`
+
+#### `freebox_nat_create` — NAT : validation RFC1918 + ports
+- `lan_ip` : `mcp.Pattern(RFC1918Pattern)` + `validateRFC1918()` — IP publique rejetée par design
+- Ports : `mcp.Min(1)/Max(65535)` + `validatePort()` — port 0 et overflow rejetés
+- `ip_proto` : `mcp.Enum("tcp", "udp")` — protocole contraint à l'espace valide
+
+#### `freebox_dhcp_static_create` — DHCP : validation MAC + IP réservée
+- `mac` : `mcp.Pattern(MACAddrPattern)` + `validateMAC()` — format strict
+- `ip` : `mcp.Pattern(IPv4Pattern)` + `validateDHCPIP()` — derniers octets .0/.1/.254/.255 rejetés (gateway, réseau, broadcast, Freebox)
+
+#### `freebox_wol` — contraintes schema
+- `mac` : `mcp.Pattern(MACAddrPattern)` — le schéma guide le client vers le bon format
+- `password` : `mcp.MaxLength(17)` — limite déclarée dans le contrat
+
+### Tests ajoutés (26 nouveaux tests de sécurité)
+- `TestValidateRFC1918_Valid/Invalid`, `TestValidatePort_Valid/Invalid`
+- `TestNATCreate_InvalidIP`, `TestNATCreate_InvalidPort`, `TestNATCreate_OK`
+- `TestValidateDHCPIP_Valid/ReservedRejected`, `TestDHCPStaticCreate_InvalidMAC/ReservedIP/OK`
+- `TestValidateDiskName_Valid/Invalid`, `TestVMCreate_InvalidDiskName`, `TestVMCreate_DiskPathConstructed`
+
+---
+
+## [0.18.0] - 2026-04-26
+
+### Sécurité — Audit comité cyber (3 rôles : red team · credentials · OWASP)
+- **CRITICAL** : `freebox_fs_list/mkdir/delete` — `sanitizeFSPath()` bloque les path traversal (`..`, `/`)
+- **CRITICAL** : `freebox_download_add` — `validateDownloadURL()` : whitelist `http/https/magnet/nzb`, blocage loopback et `169.254.x.x` (SSRF)
+- **HIGH** : `freebox_wol` — validation regex adresse MAC, limite taille SecureOn (17 chars max)
+- **CI** : `govulncheck ./...` ajouté au pipeline GitHub Actions
+
+### Ajouté
+- `CYBER_AUDIT.md` — rapport complet (16 findings, plan d'action priorisé)
+
+---
+
+## [0.17.0] - 2026-04-26
+
+### Ajouté
+- **Firmware** : `freebox_firmware_update_status` — vérification disponibilité mise à jour
+- **AirMedia** : `freebox_airmedia_config` — configuration AirMedia (activé, mot de passe)
+- **AirMedia** : `freebox_airmedia_receivers` — liste des récepteurs (capacités photo/vidéo/audio)
+- **Connexion** : `freebox_connection_config` — config WAN (ping, accès distant, Wake-on-LAN port)
+- **Téléchargements** : `freebox_download_config` — config gestionnaire (vitesse, dossier, ratio seeding)
+- **Fichiers** : `freebox_fs_mkdir` — création répertoire (tâche asynchrone)
+- **Fichiers** : `freebox_fs_delete` — suppression fichier/répertoire ⚠️ (tâche asynchrone)
+- **CI** : `.github/workflows/ci.yml` — pipeline go vet + tests + build + golangci-lint
+- **CI** : `.golangci.yml` — configuration linter (govet, errcheck, staticcheck, ineffassign)
+- **Qualité** : `QUALITY_AUDIT.md` — rapport comité multidisciplinaire (5 rôles)
+
+### Modifié
+- **Sécurité** : `wincred` — fix `unsafe.Pointer` via `unsafe.Slice` + `*credentialW` output pattern ; `go vet` PASS
+- **Architecture** : 11 fonctions `registerXxx` dégradées `writer→getter` (principle of least privilege)
+- **README** : mis à jour (49→65 outils)
+
+---
+
 ## [0.16.0] - 2026-04-27
 
 ### Ajouté
@@ -261,7 +332,9 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ---
 
-[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/mipsou/mcp-freebox/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/mipsou/mcp-freebox/compare/v0.17.0...v0.18.0
+[0.17.0]: https://github.com/mipsou/mcp-freebox/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/mipsou/mcp-freebox/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/mipsou/mcp-freebox/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/mipsou/mcp-freebox/compare/v0.13.0...v0.14.0

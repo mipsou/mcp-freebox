@@ -44,7 +44,7 @@ func Start(cfg *config.Config, c *http.Client) (*Request, error) {
 	if err != nil {
 		return nil, fmt.Errorf("pair start: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	raw, _ := io.ReadAll(resp.Body)
 	var env struct {
@@ -74,7 +74,7 @@ func WaitForGrant(cfg *config.Config, c *http.Client, req *Request, timeout time
 			return "", fmt.Errorf("pair poll: %w", err)
 		}
 		raw, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		var env struct {
 			Success bool   `json:"success"`
