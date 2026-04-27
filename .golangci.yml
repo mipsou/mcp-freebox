@@ -10,11 +10,10 @@ linters:
     - misspell
     - gofmt
     - gosimple
-
-linters-settings:
-  govet:
-    enable:
-      - unsafeptr
+  settings:
+    govet:
+      enable:
+        - unsafeptr
 
 issues:
   max-issues-per-linter: 50
