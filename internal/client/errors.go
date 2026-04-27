@@ -17,11 +17,3 @@ type APIError struct {
 func (e *APIError) Error() string {
 	return fmt.Sprintf("freebox api error %s: %s", e.ErrorCode, e.Msg)
 }
-
-// apiResponse is the generic Freebox OS API envelope.
-type apiResponse[T any] struct {
-	Success   bool   `json:"success"`
-	Msg       string `json:"msg,omitempty"`
-	ErrorCode string `json:"error_code,omitempty"`
-	Result    T      `json:"result,omitempty"`
-}
