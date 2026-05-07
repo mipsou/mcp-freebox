@@ -24,7 +24,7 @@ func newStorageServer(t *testing.T, mock mockGetter) *server.MCPServer {
 func TestStorageDisks_OK(t *testing.T) {
 	s := newStorageServer(t, mockGetter{
 		"/storage/disk/": []StorageDisk{
-			{ID: "sda", DisplayName: "WD Elements 1 TB", State: "enabled", TotalBytes: 1000204886016},
+			{ID: 1, DisplayName: "WD Elements 1 TB", State: "enabled", TotalBytes: 1000204886016},
 		},
 	})
 	result := callTool(t, s, "freebox_storage_disks")
@@ -47,7 +47,7 @@ func TestStorageDisks_APIError(t *testing.T) {
 func TestStoragePartitions_OK(t *testing.T) {
 	s := newStorageServer(t, mockGetter{
 		"/storage/partition/": []StoragePartition{
-			{ID: 1, DiskID: "sda", Fstype: "ext4", State: "mounted", Path: "/mnt/data", FreeBytes: 500000000000},
+			{ID: 1, DiskID: 1, Fstype: "ext4", State: "mounted", Path: "/mnt/data", FreeBytes: 500000000000},
 		},
 	})
 	result := callTool(t, s, "freebox_storage_partitions")

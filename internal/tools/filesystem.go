@@ -40,15 +40,17 @@ type FSTask struct {
 	Progress int    `json:"progress"`
 }
 
-// encodeFSPath encodes an absolute Freebox path to base64url (no padding)
-// as required by the /fs/ls/ endpoint.
+// encodeFSPath encodes an absolute Freebox path to standard base64 (with padding)
+// as required by the /fs/ API endpoints.
+// The Freebox API spec explicitly uses standard base64 (RFC 4648 §4) with "=" padding.
+// Example from doc: /Disque dur → L0Rpc3F1ZSBkdXI=
 func encodeFSPath(p string) string {
 	// Ensure leading slash, trim trailing slash
 	if !strings.HasPrefix(p, "/") {
 		p = "/" + p
 	}
 	p = strings.TrimRight(p, "/")
-	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(p))
+	return base64.StdEncoding.EncodeToString([]byte(p))
 }
 
 // sanitizeFSPath validates and cleans a filesystem path to prevent traversal attacks.
