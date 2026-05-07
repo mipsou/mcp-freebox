@@ -49,13 +49,14 @@ func TestVPNConnections_OK(t *testing.T) {
 	s := newVPNServer(t, mockGetter{
 		"/vpn/connection/": []VPNConnection{
 			{
-				ID:           "wg-001",
-				VPN:          "wireguard",
-				Login:        "mipsou",
-				SrcIP:        "1.2.3.4",
-				LocalIP:      "10.8.0.2",
-				PushedRoutes: []string{"192.168.1.0/24"},
-				ConnectedAt:  1714000000,
+				ID:            "wg-001",
+				VPN:           "wireguard",
+				User:          "mipsou",
+				Authenticated: true,
+				AuthTime:      1714000000,
+				SrcIP:         "1.2.3.4",
+				SrcPort:       51820,
+				LocalIP:       "10.8.0.2",
 			},
 		},
 	})
@@ -63,7 +64,7 @@ func TestVPNConnections_OK(t *testing.T) {
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
 	}
-	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"login": "mipsou"`) {
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"user": "mipsou"`) {
 		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
 	}
 }

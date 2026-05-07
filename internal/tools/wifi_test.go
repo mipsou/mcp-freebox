@@ -27,8 +27,8 @@ func TestWifiAps_OK(t *testing.T) {
 			{
 				ID:     0,
 				Name:   "Freebox WiFi",
-				Status: WifiApStatus{State: "active", PrimaryChannel: 36, ChannelWidth: "80"},
-				Config: WifiApConfig{Band: "5g", Enabled: true, Dfs: true},
+				Status: WifiApStatus{State: "active", PrimaryChannel: 36, ChannelWidth: 80},
+				Config: WifiApConfig{Band: "5g", DfsEnabled: true},
 			},
 		},
 	})
@@ -36,7 +36,7 @@ func TestWifiAps_OK(t *testing.T) {
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
 	}
-	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"band": "5g"`) {
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"channel_width": 80`) {
 		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
 	}
 }

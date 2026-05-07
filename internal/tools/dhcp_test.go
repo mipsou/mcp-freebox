@@ -47,7 +47,7 @@ func TestDhcpStatic_APIError(t *testing.T) {
 func TestDhcpLeases_OK(t *testing.T) {
 	s := newDHCPServer(t, mockGetter{
 		"/dhcp/dynamic_lease/": []DhcpDynamicLease{
-			{Mac: "11:22:33:44:55:66", Hostname: "tablet", IP: "192.168.1.42", AssignTime: 1700000000, ExpireTime: 1700086400},
+			{Mac: "11:22:33:44:55:66", Hostname: "tablet", IP: "192.168.1.42", AssignTime: 1700000000, LeaseRemaining: 86400},
 		},
 	})
 	result := callTool(t, s, "freebox_dhcp_leases")

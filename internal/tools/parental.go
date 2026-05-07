@@ -8,6 +8,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -15,26 +16,28 @@ import (
 
 // ParentalConfig reflects GET /api/v4/parental/config/
 type ParentalConfig struct {
-	Enabled       bool   `json:"enabled"`
-	DefaultPolicy string `json:"default_policy"` // allow | deny
+	DefaultFilterMode string `json:"default_filter_mode"` // allowed | denied | webonly
 }
 
-// ParentalPlanning reflects one entry from GET /api/v4/parental/planning/
-// Each entry is a time slot with a policy override.
-type ParentalPlanning struct {
-	ID     int    `json:"id"`
-	Day    int    `json:"day"`    // 0=lundi … 6=dimanche
-	Start  int    `json:"start"`  // minutes depuis minuit
-	End    int    `json:"end"`    // minutes depuis minuit
-	Policy string `json:"policy"` // allow | deny
+// ParentalFilterPlanning reflects GET /api/v4/parental/filter/{id}/planning
+type ParentalFilterPlanning struct {
+	Resolution  int      `json:"resolution"`   // nombre de slots par jour (ex: 48 = tranches 30 min)
+	CDayRanges  []string `json:"cdayranges"`   // plages personnalisées (ex: ":fr_bank_holidays")
+	Mapping     []string `json:"mapping"`      // état par slot : "allowed" | "denied" | "webonly"
 }
 
 // ParentalFilter reflects one entry from GET /api/v4/parental/filter/
 type ParentalFilter struct {
-	ID      int    `json:"id"`
-	MACAddr string `json:"mac_addr"`
-	Comment string `json:"comment"`
-	Enabled bool   `json:"enabled"`
+	ID              int      `json:"id"`
+	Macs            []string `json:"macs"`              // adresses MAC concernées
+	Hosts           []string `json:"hosts"`             // noms d'hôtes associés (lecture seule)
+	Desc            string   `json:"desc"`              // description du filtre
+	Forced          bool     `json:"forced"`            // ignorer le planning
+	ForcedMode      string   `json:"forced_mode"`       // état si forced=true
+	TmpMode         string   `json:"tmp_mode"`          // état temporaire en cours
+	TmpModeExpire   int      `json:"tmp_mode_expire"`   // secondes avant fin du mode temporaire
+	SchedulingMode  string   `json:"scheduling_mode"`   // forced | temporary | planning (lecture seule)
+	FilterState     string   `json:"filter_state"`      // allowed | denied | webonly (lecture seule)
 }
 
 func registerParental(s *server.MCPServer, c getter) {
@@ -52,17 +55,21 @@ func registerParental(s *server.MCPServer, c getter) {
 		},
 	)
 
-	// ── Planning horaire ─────────────────────────────────────────────────────
+	// ── Planning horaire d'un filtre ─────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_parental_planning",
-			mcp.WithDescription("Plages horaires du contrôle parental : jour, heure début/fin (en minutes depuis minuit), politique (allow/deny). Lecture seule."),
+			mcp.WithDescription("Planning horaire d'un filtre de contrôle parental : résolution, plages personnalisées, état par slot (allowed/denied/webonly). Lecture seule."),
+			mcp.WithNumber("filter_id",
+				mcp.Required(),
+				mcp.Description("ID du filtre parental (voir freebox_parental_filters)")),
 		),
-		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			var slots []ParentalPlanning
-			if err := c.Get(ctx, "/parental/planning/", &slots); err != nil {
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			id := req.GetInt("filter_id", 0)
+			var planning ParentalFilterPlanning
+			if err := c.Get(ctx, fmt.Sprintf("/parental/filter/%d/planning", id), &planning); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			return jsonResult(slots)
+			return jsonResult(planning)
 		},
 	)
 

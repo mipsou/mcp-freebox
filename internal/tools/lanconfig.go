@@ -17,22 +17,11 @@ import (
 // LanConfig reflects GET /api/v4/lan/config/
 type LanConfig struct {
 	IP          string `json:"ip"`
-	Mask        string `json:"netmask"`
+	Name        string `json:"name"`
 	NameDNS     string `json:"name_dns"`
 	NameMDNS    string `json:"name_mdns"`
 	NameNetbios string `json:"name_netbios"`
-	Mode        string `json:"mode"` // router | bridge
-}
-
-// LanHostName reflects one entry from GET /api/v4/lan/browser/pub/{mac}/
-type LanHostName struct {
-	ID        string `json:"id"`
-	Name      string `json:"primary_name"`
-	MAC       string `json:"l2ident"`
-	IP4       string `json:"ip4"`
-	IP6       string `json:"ip6"`
-	Reachable bool   `json:"reachable"`
-	Active    bool   `json:"active"`
+	Type        string `json:"type"` // router | bridge
 }
 
 // LanHostUpdate is the body for PUT /api/v4/lan/browser/pub/{id}
@@ -69,7 +58,7 @@ func registerLANConfig(s *server.MCPServer, c writer) {
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			id := req.GetString("id", "")
 			body := LanHostUpdate{PrimaryName: req.GetString("name", "")}
-			var updated LanHostName
+			var updated LanHost
 			if err := c.Put(ctx, fmt.Sprintf("/lan/browser/pub/%s", id), body, &updated); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
