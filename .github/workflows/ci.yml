@@ -60,6 +60,7 @@ jobs:
           Write-Host ($out -join "`n")
           if ($critical) { Write-Error "Unignored CVEs: $($critical -join ', ')"; exit 1 }
           Write-Host "WARNING: only temporarily excluded CVEs ($($found -join ', ')). Remove once go1.26.3 is in GHA CDN."
+          exit 0
 
   lint:
     name: golangci-lint
