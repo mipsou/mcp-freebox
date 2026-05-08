@@ -8,7 +8,9 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"net/url"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -30,12 +32,18 @@ type Download struct {
 	Error            string `json:"error"`
 }
 
-// DownloadAdd is the body for POST /api/v4/downloads/add/
-type DownloadAdd struct {
-	DownloadURL string `json:"download_url"`
-	DownloadDir string `json:"download_dir,omitempty"`
-	Username    string `json:"username,omitempty"`
-	Password    string `json:"password,omitempty"`
+// downloadAddForm builds the application/x-www-form-urlencoded body for
+// POST /api/v4/downloads/add/ per the Freebox OS API spec:
+//   - param name is "download_url" (not "url")
+//   - Content-Type must be application/x-www-form-urlencoded (not JSON)
+//   - download_dir must be base64-encoded (standard encoding, same as fs/ paths)
+func downloadAddForm(downloadURL, downloadDir string) url.Values {
+	form := url.Values{}
+	form.Set("download_url", downloadURL)
+	if downloadDir != "" {
+		form.Set("download_dir", base64.StdEncoding.EncodeToString([]byte(downloadDir)))
+	}
+	return form
 }
 
 func registerDownloads(s *server.MCPServer, c writer) {
@@ -68,12 +76,9 @@ func registerDownloads(s *server.MCPServer, c writer) {
 			if err := validateDownloadURL(rawURL); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			body := DownloadAdd{
-				DownloadURL: rawURL,
-				DownloadDir: req.GetString("download_dir", ""),
-			}
+			form := downloadAddForm(rawURL, req.GetString("download_dir", ""))
 			var created Download
-			if err := c.Post(ctx, "/downloads/add/", body, &created); err != nil {
+			if err := c.PostForm(ctx, "/downloads/add/", form, &created); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(created)
