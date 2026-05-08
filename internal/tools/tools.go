@@ -8,6 +8,7 @@ package tools
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -18,9 +19,12 @@ type getter interface {
 }
 
 // writer adds mutation methods (POST, PUT, DELETE).
+// PostForm is required for endpoints that use application/x-www-form-urlencoded
+// instead of application/json (e.g. /downloads/add/).
 type writer interface {
 	getter
 	Post(ctx context.Context, path string, body, dst any) error
+	PostForm(ctx context.Context, path string, values url.Values, dst any) error
 	Put(ctx context.Context, path string, body, dst any) error
 	Delete(ctx context.Context, path string) error
 }
