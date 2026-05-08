@@ -123,4 +123,3 @@ func TestDHCPStaticCreate_OK(t *testing.T) {
 		t.Fatalf("tool returned error: %v", result.Content)
 	}
 }
-
