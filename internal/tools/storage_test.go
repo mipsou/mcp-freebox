@@ -24,15 +24,24 @@ func newStorageServer(t *testing.T, mock mockGetter) *server.MCPServer {
 func TestStorageDisks_OK(t *testing.T) {
 	s := newStorageServer(t, mockGetter{
 		"/storage/disk/": []StorageDisk{
-			{ID: 1, DisplayName: "WD Elements 1 TB", State: "enabled", TotalBytes: 1000204886016},
+			{
+				ID: 1, DisplayName: "WD Elements 1 TB", State: "enabled", TotalBytes: 1000204886016,
+				Partitions: []StoragePartition{
+					{ID: 3, DiskID: 1, Label: "Disque dur", Fstype: "ext4", State: "mounted", TotalBytes: 245091500032},
+				},
+			},
 		},
 	})
 	result := callTool(t, s, "freebox_storage_disks")
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
 	}
-	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"display_name": "WD Elements 1 TB"`) {
-		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
+	text := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, `"display_name": "WD Elements 1 TB"`) {
+		t.Errorf("unexpected result: %s", text)
+	}
+	if !strings.Contains(text, `"fstype": "ext4"`) {
+		t.Errorf("embedded partitions missing: %s", text)
 	}
 }
 
