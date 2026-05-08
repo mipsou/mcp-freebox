@@ -15,14 +15,14 @@ import (
 
 // SwitchMacEntry reflects a MAC address seen on a switch port.
 type SwitchMacEntry struct {
-	MacAddr  string `json:"mac_addr"`
+	Mac      string `json:"mac"`
 	Hostname string `json:"hostname"`
 }
 
 // SwitchPortStatus reflects one entry from GET /api/v4/switch/status/
 type SwitchPortStatus struct {
 	ID      int              `json:"id"`
-	Link    bool             `json:"link"`
+	Link    string           `json:"link"`   // "up" | "down"
 	Speed   string           `json:"speed"`  // "10", "100", "1000" (Mbps)
 	Duplex  string           `json:"duplex"` // "full", "half"
 	MacList []SwitchMacEntry `json:"mac_list"`

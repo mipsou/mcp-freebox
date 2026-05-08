@@ -26,16 +26,16 @@ func TestSwitchPorts_OK(t *testing.T) {
 		"/switch/status/": []SwitchPortStatus{
 			{
 				ID:     1,
-				Link:   true,
+				Link:   "up",
 				Speed:  "1000",
 				Duplex: "full",
 				MacList: []SwitchMacEntry{
-					{MacAddr: "aa:bb:cc:dd:ee:ff", Hostname: "coreos-11"},
+					{Mac: "aa:bb:cc:dd:ee:ff", Hostname: "coreos-11"},
 				},
 			},
 			{
 				ID:      2,
-				Link:    false,
+				Link:    "down",
 				Speed:   "100",
 				Duplex:  "full",
 				MacList: []SwitchMacEntry{},

@@ -23,13 +23,13 @@ func newNetshareServer(t *testing.T, mock mockGetter) *server.MCPServer {
 
 func TestSambaConfig_OK(t *testing.T) {
 	s := newNetshareServer(t, mockGetter{
-		"/netshare/samba/": SambaConfig{Enabled: true, WorkGroup: "WORKGROUP"},
+		"/netshare/samba/": SambaConfig{FileShareEnabled: true, Workgroup: "WORKGROUP"},
 	})
 	result := callTool(t, s, "freebox_samba_config")
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
 	}
-	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"enabled": true`) {
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"file_share_enabled": true`) {
 		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
 	}
 }

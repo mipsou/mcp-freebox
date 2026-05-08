@@ -25,12 +25,13 @@ type DhcpStaticLease struct {
 
 // DhcpDynamicLease reflects one entry from GET /api/v4/dhcp/dynamic_lease/
 type DhcpDynamicLease struct {
-	Mac        string `json:"mac"`
-	Hostname   string `json:"hostname"`
-	IP         string `json:"ip"`
-	AssignTime int64  `json:"assign_time"`
-	ExpireTime int64  `json:"expire_time"`
-	IsStatic   bool   `json:"is_static"`
+	Mac            string `json:"mac"`
+	Hostname       string `json:"hostname"`
+	IP             string `json:"ip"`
+	AssignTime     int64  `json:"assign_time"`
+	RefreshTime    int64  `json:"refresh_time"`
+	LeaseRemaining int    `json:"lease_remaining"` // secondes restantes avant renouvellement
+	IsStatic       bool   `json:"is_static"`
 }
 
 func registerDHCP(s *server.MCPServer, c writer) {

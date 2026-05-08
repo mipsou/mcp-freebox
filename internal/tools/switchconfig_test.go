@@ -23,7 +23,7 @@ func newSwitchConfigServer(t *testing.T, mock mockGetter) *server.MCPServer {
 
 func TestSwitchPortConfig_OK(t *testing.T) {
 	s := newSwitchConfigServer(t, mockGetter{
-		"/switch/port/1/config/": SwitchPortConfig{ID: 1, Enabled: true, DuplexMode: "auto", SpeedMode: "auto"},
+		"/switch/port/1": SwitchPortConfig{ID: 1, DuplexMode: "auto", SpeedMode: "auto"},
 	})
 	result := callToolWithArgs(t, s, "freebox_switch_port_config", map[string]any{"id": float64(1)})
 	if result.IsError {
@@ -44,7 +44,7 @@ func TestSwitchPortConfig_APIError(t *testing.T) {
 
 func TestSwitchPortStats_OK(t *testing.T) {
 	s := newSwitchConfigServer(t, mockGetter{
-		"/switch/port/2/stats/": SwitchStats{PortID: 2, RxBytesRate: 1000000, TxBytesRate: 500000},
+		"/switch/port/2/stats": SwitchStats{RxBytesRate: 1000000, TxBytesRate: 500000},
 	})
 	result := callToolWithArgs(t, s, "freebox_switch_port_stats", map[string]any{"id": float64(2)})
 	if result.IsError {

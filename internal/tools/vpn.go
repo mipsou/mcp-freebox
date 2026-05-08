@@ -27,13 +27,16 @@ type VPNServer struct {
 
 // VPNConnection reflects one entry from GET /api/v4/vpn/connection/
 type VPNConnection struct {
-	ID           string   `json:"id"`
-	VPN          string   `json:"vpn"`           // nom du serveur (ex: wireguard)
-	Login        string   `json:"login"`         // utilisateur connecté
-	SrcIP        string   `json:"src_ip"`        // IP publique du client
-	LocalIP      string   `json:"local_ip"`      // IP tunnel assignée
-	PushedRoutes []string `json:"pushed_routes"` // routes poussées au client
-	ConnectedAt  int64    `json:"connected_at"`  // timestamp Unix
+	ID            string `json:"id"`
+	VPN           string `json:"vpn"`           // nom du serveur (ex: wireguard)
+	User          string `json:"user"`          // utilisateur connecté
+	Authenticated bool   `json:"authenticated"` // connexion authentifiée
+	AuthTime      int64  `json:"auth_time"`     // timestamp Unix d'authentification
+	SrcIP         string `json:"src_ip"`        // IP publique du client
+	SrcPort       int    `json:"src_port"`      // port source du client
+	LocalIP       string `json:"local_ip"`      // IP tunnel assignée
+	RxBytes       int    `json:"rx_bytes"`      // octets reçus
+	TxBytes       int    `json:"tx_bytes"`      // octets envoyés
 }
 
 // VPNClientConfig reflects one entry from GET /api/v4/vpn_client/config/
@@ -63,7 +66,7 @@ func registerVPN(s *server.MCPServer, c getter) {
 	// ── Serveur VPN — connexions actives ─────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_vpn_connections",
-			mcp.WithDescription("Liste les clients VPN actuellement connectés à la Freebox : protocole, login, IP source, IP tunnel, routes poussées, timestamp de connexion. Lecture seule."),
+			mcp.WithDescription("Liste les clients VPN actuellement connectés à la Freebox : protocole, utilisateur, IP source/port, IP tunnel, octets Rx/Tx, timestamp d'authentification. Lecture seule."),
 		),
 		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var conns []VPNConnection

@@ -13,20 +13,24 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// SambaConfig reflects GET /api/v4/share/samba/
+// SambaConfig reflects GET /api/v4/netshare/samba/
 type SambaConfig struct {
-	Enabled        bool   `json:"enabled"`
-	LogonEnabled   bool   `json:"logon_enabled"`
-	WorkGroup      string `json:"work_group"`
-	PrinterEnabled bool   `json:"printer_enabled"`
+	FileShareEnabled  bool   `json:"file_share_enabled"`  // partage de fichiers activé
+	PrintShareEnabled bool   `json:"print_share_enabled"` // partage d'imprimante activé
+	LogonEnabled      bool   `json:"logon_enabled"`       // authentification requise
+	LogonUser         string `json:"logon_user"`          // identifiant Samba
+	Workgroup         string `json:"workgroup"`           // nom du workgroup
 }
 
-// AFPConfig reflects GET /api/v4/share/afp/
+// AFPConfig reflects GET /api/v4/netshare/afp/
 type AFPConfig struct {
-	Enabled bool `json:"enabled"`
+	Enabled    bool   `json:"enabled"`
+	GuestAllow bool   `json:"guest_allow"` // accès invité autorisé
+	ServerType string `json:"server_type"` // type d'affichage macOS (imac, macbook, etc.)
+	LoginName  string `json:"login_name"`  // identifiant AFP
 }
 
-// SambaShare reflects one entry from GET /api/v4/share/samba/share/
+// SambaShare reflects one entry from GET /api/v4/netshare/samba/share/
 type SambaShare struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
