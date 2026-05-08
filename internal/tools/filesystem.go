@@ -29,6 +29,26 @@ type FSEntry struct {
 	MimeType     string `json:"mimetype"`
 }
 
+// FSTask reflects the async task returned by rm/mv/cp operations.
+// Note: mkdir returns a bare string task ID, not an FSTask object.
+type FSTask struct {
+	ID       int    `json:"id"`
+	Type     string `json:"type"`  // rm | mv | cp
+	State    string `json:"state"` // queued | running | done | failed
+	Error    string `json:"error"`
+	From     string `json:"from"`
+	To       string `json:"to"`
+	Progress int    `json:"progress"`
+}
+
+// validFSDstModes lists accepted values for the dst_mode parameter of mv/cp.
+var validFSDstModes = map[string]bool{
+	"overwrite": true,
+	"both":      true,
+	"recent":    true,
+	"skip":      true,
+}
+
 // encodeFSPath encodes an absolute Freebox path to standard base64 (with padding)
 // as required by the /fs/ API endpoints.
 // The Freebox API spec explicitly uses standard base64 (RFC 4648 §4) with "=" padding.
@@ -58,6 +78,7 @@ func sanitizeFSPath(p string) (string, error) {
 }
 
 func registerFilesystem(s *server.MCPServer, c writer) {
+	// ── Lister ───────────────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_fs_list",
 			mcp.WithDescription("Liste le contenu d'un répertoire sur le stockage de la Freebox (disque optionnel, clé USB…). Utile en PRA pour vérifier les images qcow2 disponibles dans /Freebox/VMs/."),
@@ -107,6 +128,7 @@ func registerFilesystem(s *server.MCPServer, c writer) {
 				"parent":  encodeFSPath(parent),
 				"dirname": name,
 			}
+			// /fs/mkdir/ returns a bare string task ID (not an FSTask object)
 			var taskID string
 			if err := c.Post(ctx, "/fs/mkdir/", body, &taskID); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
@@ -118,7 +140,7 @@ func registerFilesystem(s *server.MCPServer, c writer) {
 	// ── Supprimer des fichiers/répertoires ────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_fs_delete",
-			mcp.WithDescription("⚠️ Supprime un fichier ou un répertoire sur le stockage de la Freebox. Opération irréversible. Retourne l'identifiant de la tâche asynchrone."),
+			mcp.WithDescription("⚠️ Supprime un fichier ou un répertoire sur le stockage de la Freebox. Opération irréversible. Retourne la tâche asynchrone créée."),
 			mcp.WithString("path",
 				mcp.Required(),
 				mcp.Description("Chemin absolu du fichier ou répertoire à supprimer, ex: /Freebox/Downloads/fichier.iso"),
@@ -133,11 +155,122 @@ func registerFilesystem(s *server.MCPServer, c writer) {
 			body := map[string]any{
 				"files": []string{encodeFSPath(p)},
 			}
-			var taskID string
-			if err := c.Post(ctx, "/fs/rm/", body, &taskID); err != nil {
+			// /fs/rm/ returns a FSTask object (unlike /fs/mkdir/ which returns a bare string)
+			var task FSTask
+			if err := c.Post(ctx, "/fs/rm/", body, &task); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			return mcp.NewToolResultText(fmt.Sprintf("Suppression de '%s' en cours. Tâche : %s", p, taskID)), nil
+			return jsonResult(task)
+		},
+	)
+
+	// ── Déplacer des fichiers/répertoires ─────────────────────────────────────
+	s.AddTool(
+		mcp.NewTool("freebox_fs_move",
+			mcp.WithDescription("Déplace un ou plusieurs fichiers/répertoires vers un répertoire de destination sur le stockage Freebox. Retourne la tâche asynchrone créée."),
+			mcp.WithArray("src_paths",
+				mcp.Required(),
+				mcp.Description("Liste des chemins sources absolus à déplacer, ex: [\"/Disque 1/Téléchargements/alma.qcow2\"]"),
+				mcp.WithStringItems(),
+			),
+			mcp.WithString("dst_path",
+				mcp.Required(),
+				mcp.Description("Répertoire de destination absolu, ex: /Freebox/VMs"),
+			),
+			mcp.WithString("dst_mode",
+				mcp.Description("Comportement si la destination existe : overwrite | both | recent | skip (défaut: skip)"),
+				mcp.Enum("overwrite", "both", "recent", "skip"),
+			),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			srcs := req.GetStringSlice("src_paths", nil)
+			if len(srcs) == 0 {
+				return mcp.NewToolResultError("src_paths ne peut pas être vide"), nil
+			}
+			rawDst := req.GetString("dst_path", "")
+			dst, err := sanitizeFSPath(rawDst)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			mode := req.GetString("dst_mode", "skip")
+			if !validFSDstModes[mode] {
+				return mcp.NewToolResultError(
+					fmt.Sprintf("dst_mode invalide : %q (valeurs : overwrite, both, recent, skip)", mode),
+				), nil
+			}
+			encodedSrcs := make([]string, 0, len(srcs))
+			for _, s := range srcs {
+				clean, err := sanitizeFSPath(s)
+				if err != nil {
+					return mcp.NewToolResultError(fmt.Sprintf("src_paths[%q] : %v", s, err)), nil
+				}
+				encodedSrcs = append(encodedSrcs, encodeFSPath(clean))
+			}
+			body := map[string]any{
+				"files": encodedSrcs,
+				"dst":   encodeFSPath(dst),
+				"mode":  mode,
+			}
+			var task FSTask
+			if err := c.Post(ctx, "/fs/mv/", body, &task); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(task)
+		},
+	)
+
+	// ── Copier des fichiers/répertoires ───────────────────────────────────────
+	s.AddTool(
+		mcp.NewTool("freebox_fs_copy",
+			mcp.WithDescription("Copie un ou plusieurs fichiers/répertoires vers un répertoire de destination sur le stockage Freebox. Retourne la tâche asynchrone créée."),
+			mcp.WithArray("src_paths",
+				mcp.Required(),
+				mcp.Description("Liste des chemins sources absolus à copier, ex: [\"/Disque 1/Téléchargements/alma.qcow2\"]"),
+				mcp.WithStringItems(),
+			),
+			mcp.WithString("dst_path",
+				mcp.Required(),
+				mcp.Description("Répertoire de destination absolu, ex: /Freebox/VMs"),
+			),
+			mcp.WithString("dst_mode",
+				mcp.Description("Comportement si la destination existe : overwrite | both | recent | skip (défaut: skip)"),
+				mcp.Enum("overwrite", "both", "recent", "skip"),
+			),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			srcs := req.GetStringSlice("src_paths", nil)
+			if len(srcs) == 0 {
+				return mcp.NewToolResultError("src_paths ne peut pas être vide"), nil
+			}
+			rawDst := req.GetString("dst_path", "")
+			dst, err := sanitizeFSPath(rawDst)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			mode := req.GetString("dst_mode", "skip")
+			if !validFSDstModes[mode] {
+				return mcp.NewToolResultError(
+					fmt.Sprintf("dst_mode invalide : %q (valeurs : overwrite, both, recent, skip)", mode),
+				), nil
+			}
+			encodedSrcs := make([]string, 0, len(srcs))
+			for _, s := range srcs {
+				clean, err := sanitizeFSPath(s)
+				if err != nil {
+					return mcp.NewToolResultError(fmt.Sprintf("src_paths[%q] : %v", s, err)), nil
+				}
+				encodedSrcs = append(encodedSrcs, encodeFSPath(clean))
+			}
+			body := map[string]any{
+				"files": encodedSrcs,
+				"dst":   encodeFSPath(dst),
+				"mode":  mode,
+			}
+			var task FSTask
+			if err := c.Post(ctx, "/fs/cp/", body, &task); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(task)
 		},
 	)
 }

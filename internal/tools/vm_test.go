@@ -276,3 +276,71 @@ func TestVMDelete_APIError(t *testing.T) {
 		t.Error("expected tool error result")
 	}
 }
+
+// ── vm_create : cloud-init + cd_path + bind_usb_ports ────────────────────────
+
+func TestVMCreate_CloudInit_OK(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{
+		"/vm/": VM{ID: 5, Name: "alma-pra", CloudinitEnabled: true},
+	}})
+	userdata := "#cloud-config\nhostname: alma-pra\nssh_authorized_keys:\n  - ssh-ed25519 AAAA...\n"
+	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name":               "alma-pra",
+		"memory":             float64(768),
+		"vcpus":              float64(2),
+		"disk_name":          "alma9.qcow2",
+		"disk_type":          "qcow2",
+		"cloudinit_userdata": userdata,
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+}
+
+func TestVMCreate_CloudInit_TooLong(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
+	userdata := strings.Repeat("x", maxCloudinitLen+1)
+	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name":               "big-cloud",
+		"memory":             float64(512),
+		"vcpus":              float64(1),
+		"disk_name":          "big.qcow2",
+		"disk_type":          "qcow2",
+		"cloudinit_userdata": userdata,
+	})
+	if !result.IsError {
+		t.Error("expected error for oversized cloudinit_userdata")
+	}
+}
+
+func TestVMCreate_CDPath_OK(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{
+		"/vm/": VM{ID: 6, Name: "install-vm"},
+	}})
+	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name":      "install-vm",
+		"memory":    float64(1024),
+		"vcpus":     float64(2),
+		"disk_name": "debian.qcow2",
+		"disk_type": "qcow2",
+		"cd_path":   "/Disque 1/ISO/debian-12-arm64.iso",
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+}
+
+func TestVMCreate_CDPath_TraversalBlocked(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
+	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name":      "hack",
+		"memory":    float64(512),
+		"vcpus":     float64(1),
+		"disk_name": "hack.qcow2",
+		"disk_type": "qcow2",
+		"cd_path":   "/../etc/passwd",
+	})
+	if !result.IsError {
+		t.Error("path traversal in cd_path should return error")
+	}
+}
