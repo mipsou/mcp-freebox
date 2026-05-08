@@ -15,11 +15,11 @@ import (
 
 // SambaConfig reflects GET /api/v4/netshare/samba/
 type SambaConfig struct {
-	FileShareEnabled bool   `json:"file_share_enabled"` // partage de fichiers activé
-	PrintShareEnabled bool  `json:"print_share_enabled"` // partage d'imprimante activé
-	LogonEnabled     bool   `json:"logon_enabled"`       // authentification requise
-	LogonUser        string `json:"logon_user"`          // identifiant Samba
-	Workgroup        string `json:"workgroup"`           // nom du workgroup
+	FileShareEnabled  bool   `json:"file_share_enabled"`  // partage de fichiers activé
+	PrintShareEnabled bool   `json:"print_share_enabled"` // partage d'imprimante activé
+	LogonEnabled      bool   `json:"logon_enabled"`       // authentification requise
+	LogonUser         string `json:"logon_user"`          // identifiant Samba
+	Workgroup         string `json:"workgroup"`           // nom du workgroup
 }
 
 // AFPConfig reflects GET /api/v4/netshare/afp/

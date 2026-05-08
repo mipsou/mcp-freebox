@@ -21,23 +21,23 @@ type ParentalConfig struct {
 
 // ParentalFilterPlanning reflects GET /api/v4/parental/filter/{id}/planning
 type ParentalFilterPlanning struct {
-	Resolution  int      `json:"resolution"`   // nombre de slots par jour (ex: 48 = tranches 30 min)
-	CDayRanges  []string `json:"cdayranges"`   // plages personnalisées (ex: ":fr_bank_holidays")
-	Mapping     []string `json:"mapping"`      // état par slot : "allowed" | "denied" | "webonly"
+	Resolution int      `json:"resolution"` // nombre de slots par jour (ex: 48 = tranches 30 min)
+	CDayRanges []string `json:"cdayranges"` // plages personnalisées (ex: ":fr_bank_holidays")
+	Mapping    []string `json:"mapping"`    // état par slot : "allowed" | "denied" | "webonly"
 }
 
 // ParentalFilter reflects one entry from GET /api/v4/parental/filter/
 type ParentalFilter struct {
-	ID              int      `json:"id"`
-	Macs            []string `json:"macs"`              // adresses MAC concernées
-	Hosts           []string `json:"hosts"`             // noms d'hôtes associés (lecture seule)
-	Desc            string   `json:"desc"`              // description du filtre
-	Forced          bool     `json:"forced"`            // ignorer le planning
-	ForcedMode      string   `json:"forced_mode"`       // état si forced=true
-	TmpMode         string   `json:"tmp_mode"`          // état temporaire en cours
-	TmpModeExpire   int      `json:"tmp_mode_expire"`   // secondes avant fin du mode temporaire
-	SchedulingMode  string   `json:"scheduling_mode"`   // forced | temporary | planning (lecture seule)
-	FilterState     string   `json:"filter_state"`      // allowed | denied | webonly (lecture seule)
+	ID             int      `json:"id"`
+	Macs           []string `json:"macs"`            // adresses MAC concernées
+	Hosts          []string `json:"hosts"`           // noms d'hôtes associés (lecture seule)
+	Desc           string   `json:"desc"`            // description du filtre
+	Forced         bool     `json:"forced"`          // ignorer le planning
+	ForcedMode     string   `json:"forced_mode"`     // état si forced=true
+	TmpMode        string   `json:"tmp_mode"`        // état temporaire en cours
+	TmpModeExpire  int      `json:"tmp_mode_expire"` // secondes avant fin du mode temporaire
+	SchedulingMode string   `json:"scheduling_mode"` // forced | temporary | planning (lecture seule)
+	FilterState    string   `json:"filter_state"`    // allowed | denied | webonly (lecture seule)
 }
 
 func registerParental(s *server.MCPServer, c getter) {

@@ -25,17 +25,17 @@ type DHCPOption struct {
 // DHCPConfig reflects GET /api/v4/dhcp/config/
 type DHCPConfig struct {
 	Enabled              bool         `json:"enabled"`
-	StickyAssign         bool         `json:"sticky_assign"`            // toujours attribuer la même IP à un hôte donné
-	BootServer           string       `json:"boot_server"`              // serveur TFTP / next-server BOOTP (siaddr)
-	BootFile             string       `json:"boot_file"`                // fichier de boot (option 67)
-	GatewayIP            string       `json:"gateway"`                  // lecture seule
-	NetmaskIP            string       `json:"netmask"`                  // lecture seule
+	StickyAssign         bool         `json:"sticky_assign"` // toujours attribuer la même IP à un hôte donné
+	BootServer           string       `json:"boot_server"`   // serveur TFTP / next-server BOOTP (siaddr)
+	BootFile             string       `json:"boot_file"`     // fichier de boot (option 67)
+	GatewayIP            string       `json:"gateway"`       // lecture seule
+	NetmaskIP            string       `json:"netmask"`       // lecture seule
 	IPRangeStart         string       `json:"ip_range_start"`
 	IPRangeEnd           string       `json:"ip_range_end"`
 	AlwaysBroadcast      bool         `json:"always_broadcast"`
 	IgnoreOutOfRangeHint bool         `json:"ignore_out_of_range_hint"` // ignorer hint hors plage
 	DNSServers           []string     `json:"dns"`
-	Options              []DHCPOption `json:"options"`                  // options DHCP personnalisées RFC2132
+	Options              []DHCPOption `json:"options"` // options DHCP personnalisées RFC2132
 }
 
 // dhcpOptionsUpdate is the minimal payload accepted by PUT /api/v4/dhcp/config/
