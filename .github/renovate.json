@@ -26,7 +26,7 @@
   "prHourlyLimit": 4,
 
   "vulnerabilityAlerts": {
-    "description": "Alertes de sécurité — PR immédiate hors schedule, label security",
+    "description": "Alertes CVE — PR immédiate hors schedule, review humaine obligatoire",
     "labels": ["security", "dependencies"],
     "schedule": ["at any time"],
     "automerge": false
@@ -35,7 +35,7 @@
   "osvVulnerabilityAlerts": true,
 
   "lockFileMaintenance": {
-    "description": "Maintien de go.sum — nettoyage hebdomadaire",
+    "description": "Nettoyage go.sum hebdomadaire — automerge car aucun code exécuté en CI",
     "enabled": true,
     "schedule": ["before 6am on Monday"],
     "automerge": true
@@ -43,23 +43,21 @@
 
   "packageRules": [
     {
-      "description": "GitHub Actions — SHA pins auto-maintenus + commentaire version. Automerge car zizmor+CI valident chaque mise a jour.",
+      "description": "GitHub Actions — automerge DESACTIVE. Les actions s'exécutent dans la CI avec des permissions élevées (contents:write, id-token:write). Une SHA compromise auto-mergée = exécution de code malveillant. Review humaine obligatoire.",
       "matchManagers": ["github-actions"],
       "groupName": "github-actions",
       "pinDigests": true,
-      "automerge": true,
-      "automergeType": "pr",
-      "platformAutomerge": true
+      "automerge": false
     },
     {
-      "description": "Go toolchain — mise a jour de la directive go X.Y.Z dans go.mod (resoud les CVEs stdlib). Review manuelle : peut impacter compatibilite.",
+      "description": "Go toolchain — review manuelle : impact sur compatibilité stdlib et CVEs systèmes.",
       "matchManagers": ["gomod"],
       "matchDepTypes": ["golang"],
       "groupName": "go-toolchain",
       "automerge": false
     },
     {
-      "description": "Go modules patch+minor+digest — groupes et automerge car tests+govulncheck+lint valident.",
+      "description": "Go modules patch+minor+digest — automerge : les dépendances passent par build+tests+govulncheck+lint avant d'être exécutées. Surface d'attaque limitée comparée aux actions CI.",
       "matchManagers": ["gomod"],
       "matchDepTypes": ["require"],
       "matchUpdateTypes": ["patch", "minor", "digest"],
@@ -75,19 +73,25 @@
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "labels": ["dependencies", "breaking-change"]
+    },
+    {
+      "description": "govulncheck — outil CI, même règle que les actions : automerge DESACTIVE.",
+      "customType": "regex",
+      "matchManagers": ["regex"],
+      "matchPackageNames": ["golang.org/x/vuln"],
+      "automerge": false
     }
   ],
 
   "customManagers": [
     {
-      "description": "govulncheck version epinglee dans ci.yml — suivi semver via datasource Go.",
+      "description": "govulncheck version épinglée dans ci.yml — suivi semver via datasource Go.",
       "customType": "regex",
       "fileMatch": ["^\\.github/workflows/.*\\.yml$"],
       "matchStrings": ["govulncheck@(?<currentValue>v[\\d.]+)"],
       "depNameTemplate": "golang.org/x/vuln",
       "datasourceTemplate": "go",
-      "versioningTemplate": "semver",
-      "automerge": true
+      "versioningTemplate": "semver"
     }
   ]
 }
