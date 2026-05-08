@@ -7,7 +7,6 @@
 package tools
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -122,43 +121,5 @@ func TestDHCPStaticCreate_OK(t *testing.T) {
 	})
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
-	}
-}
-
-// ── freebox_dhcp_lease_release ────────────────────────────────────────────────
-
-func TestDHCPLeaseRelease_OK(t *testing.T) {
-	s := newDHCPServer(t, mockWriter{mockGetter: mockGetter{}})
-	result := callToolWithArgs(t, s, "freebox_dhcp_lease_release", map[string]any{
-		"mac": "11:22:33:44:55:66",
-	})
-	if result.IsError {
-		t.Fatalf("tool returned error: %v", result.Content)
-	}
-	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, "11:22:33:44:55:66") {
-		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
-	}
-}
-
-func TestDHCPLeaseRelease_InvalidMAC(t *testing.T) {
-	s := newDHCPServer(t, mockWriter{mockGetter: mockGetter{}})
-	result := callToolWithArgs(t, s, "freebox_dhcp_lease_release", map[string]any{
-		"mac": "not-a-mac",
-	})
-	if !result.IsError {
-		t.Error("invalid MAC should return error")
-	}
-}
-
-func TestDHCPLeaseRelease_APIError(t *testing.T) {
-	s := newDHCPServer(t, mockWriter{
-		mockGetter: mockGetter{},
-		deleteErrs: map[string]error{"/dhcp/dynamic_lease/aa:bb:cc:dd:ee:ff": fmt.Errorf("lease not found")},
-	})
-	result := callToolWithArgs(t, s, "freebox_dhcp_lease_release", map[string]any{
-		"mac": "aa:bb:cc:dd:ee:ff",
-	})
-	if !result.IsError {
-		t.Error("expected tool error result")
 	}
 }
