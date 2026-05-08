@@ -29,10 +29,10 @@ func (m mockGetter) Get(_ context.Context, path string, dst any) error {
 	return json.Unmarshal(b, dst)
 }
 
-func (m mockGetter) Post(_ context.Context, _ string, _, _ any) error                  { return nil }
-func (m mockGetter) PostForm(_ context.Context, _ string, _ url.Values, _ any) error   { return nil }
-func (m mockGetter) Put(_ context.Context, _ string, _, _ any) error                   { return nil }
-func (m mockGetter) Delete(_ context.Context, _ string) error                          { return nil }
+func (m mockGetter) Post(_ context.Context, _ string, _, _ any) error                { return nil }
+func (m mockGetter) PostForm(_ context.Context, _ string, _ url.Values, _ any) error { return nil }
+func (m mockGetter) Put(_ context.Context, _ string, _, _ any) error                 { return nil }
+func (m mockGetter) Delete(_ context.Context, _ string) error                        { return nil }
 
 type notFoundErr struct{ path string }
 
