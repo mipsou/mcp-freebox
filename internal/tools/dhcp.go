@@ -116,4 +116,25 @@ func registerDHCP(s *server.MCPServer, c writer) {
 			return mcp.NewToolResultText(fmt.Sprintf("Réservation DHCP %s supprimée.", id)), nil
 		},
 	)
+
+	// ── Libérer un bail dynamique ─────────────────────────────────────────────
+	s.AddTool(
+		mcp.NewTool("freebox_dhcp_lease_release",
+			mcp.WithDescription("Libère un bail DHCP dynamique actif identifié par son adresse MAC. L'équipement devra renouveler son bail au prochain démarrage réseau."),
+			mcp.WithString("mac",
+				mcp.Required(),
+				mcp.Description("Adresse MAC du client dont le bail doit être libéré (ex: aa:bb:cc:dd:ee:ff)"),
+				mcp.Pattern(MACAddrPattern)),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			mac := req.GetString("mac", "")
+			if err := validateMAC(mac); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			if err := c.Delete(ctx, fmt.Sprintf("/dhcp/dynamic_lease/%s", mac)); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return mcp.NewToolResultText(fmt.Sprintf("Bail DHCP de %s libéré.", mac)), nil
+		},
+	)
 }

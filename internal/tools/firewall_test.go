@@ -24,7 +24,7 @@ func newFirewallServer(t *testing.T, mock mockGetter) *server.MCPServer {
 func TestFirewallIncoming_OK(t *testing.T) {
 	s := newFirewallServer(t, mockGetter{
 		"/fw/incoming/": []FirewallIncomingRule{
-			{ID: 1, Enabled: true, Comment: "Block scan", Action: "drop", IPProto: "tcp", SrcIP: "0.0.0.0/0"},
+			{ID: "1", Enabled: true, Comment: "Block scan", Action: "drop", IPProto: "tcp", SrcIP: "0.0.0.0/0"},
 		},
 	})
 	result := callTool(t, s, "freebox_firewall_incoming")
