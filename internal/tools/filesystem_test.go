@@ -39,15 +39,15 @@ func TestEncodeFSPath(t *testing.T) {
 }
 
 func TestFSList_OK(t *testing.T) {
-	path := "/Freebox/VMs"
-	encoded := encodeFSPath(path)
+	p := "/Freebox/VMs"
+	encoded := encodeFSPath(p)
 	s := newFSServer(t, mockGetter{
 		"/fs/ls/" + encoded: []FSEntry{
 			{Name: "Fedora.qcow2", Type: "file", Size: 5368709120, Path: encodeFSPath("/Freebox/VMs/Fedora.qcow2")},
 			{Name: "Fedora-Server-KVM-40-1.14.aarch64.qcow2", Type: "file", Size: 1073741824, Path: encodeFSPath("/Freebox/VMs/Fedora-Server-KVM-40-1.14.aarch64.qcow2")},
 		},
 	})
-	req := callToolWithArgs(t, s, "freebox_fs_list", map[string]any{"path": path})
+	req := callToolWithArgs(t, s, "freebox_fs_list", map[string]any{"path": p})
 	if req.IsError {
 		t.Fatalf("tool returned error: %v", req.Content)
 	}
@@ -64,7 +64,8 @@ func TestFSList_APIError(t *testing.T) {
 	}
 }
 
-// mockGetter.Post always returns nil → mkdir/delete never error
+// ── fs_mkdir : /fs/mkdir/ returns a bare string task ID ───────────────────────
+
 func TestFSMkdir_NoError(t *testing.T) {
 	s := newFSServer(t, mockGetter{})
 	req := callToolWithArgs(t, s, "freebox_fs_mkdir", map[string]any{
@@ -76,6 +77,8 @@ func TestFSMkdir_NoError(t *testing.T) {
 	}
 }
 
+// ── fs_delete : /fs/rm/ returns a FSTask object ───────────────────────────────
+
 func TestFSDelete_NoError(t *testing.T) {
 	s := newFSServer(t, mockGetter{})
 	req := callToolWithArgs(t, s, "freebox_fs_delete", map[string]any{
@@ -84,9 +87,104 @@ func TestFSDelete_NoError(t *testing.T) {
 	if req.IsError {
 		t.Errorf("unexpected error: %v", req.Content)
 	}
+	// Response must be a JSON object (FSTask), not a plain string
+	text := req.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, `"state"`) {
+		t.Errorf("expected FSTask JSON in response, got: %s", text)
+	}
 }
 
-// ── Sécurité : path traversal ────────────────────────────────────────────────
+func TestFSDelete_TraversalBlocked(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_delete", map[string]any{"path": "/Freebox/../../etc"})
+	if !req.IsError {
+		t.Error("path traversal should return error")
+	}
+}
+
+// ── fs_move ───────────────────────────────────────────────────────────────────
+
+func TestFSMove_OK(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_move", map[string]any{
+		"src_paths": []any{"/Disque 1/Téléchargements/alma.qcow2"},
+		"dst_path":  "/Freebox/VMs",
+	})
+	if req.IsError {
+		t.Errorf("unexpected error: %v", req.Content)
+	}
+}
+
+func TestFSMove_DefaultMode_Skip(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_move", map[string]any{
+		"src_paths": []any{"/Disque 1/file.iso"},
+		"dst_path":  "/Freebox/VMs",
+		"dst_mode":  "overwrite",
+	})
+	if req.IsError {
+		t.Errorf("unexpected error: %v", req.Content)
+	}
+}
+
+func TestFSMove_EmptySrcs(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_move", map[string]any{
+		"src_paths": []any{},
+		"dst_path":  "/Freebox/VMs",
+	})
+	if !req.IsError {
+		t.Error("expected error for empty src_paths")
+	}
+}
+
+func TestFSMove_TraversalInSrc(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_move", map[string]any{
+		"src_paths": []any{"/../etc/passwd"},
+		"dst_path":  "/Freebox/VMs",
+	})
+	if !req.IsError {
+		t.Error("path traversal in src_paths should return error")
+	}
+}
+
+func TestFSMove_TraversalInDst(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_move", map[string]any{
+		"src_paths": []any{"/Disque 1/file.iso"},
+		"dst_path":  "/Freebox/../../etc",
+	})
+	if !req.IsError {
+		t.Error("path traversal in dst_path should return error")
+	}
+}
+
+// ── fs_copy ───────────────────────────────────────────────────────────────────
+
+func TestFSCopy_OK(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_copy", map[string]any{
+		"src_paths": []any{"/Disque 1/Téléchargements/alma.qcow2"},
+		"dst_path":  "/Freebox/VMs",
+	})
+	if req.IsError {
+		t.Errorf("unexpected error: %v", req.Content)
+	}
+}
+
+func TestFSCopy_TraversalBlocked(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_copy", map[string]any{
+		"src_paths": []any{"/../etc/shadow"},
+		"dst_path":  "/Freebox/VMs",
+	})
+	if !req.IsError {
+		t.Error("path traversal should return error")
+	}
+}
+
+// ── Sécurité : path traversal (commun) ───────────────────────────────────────
 
 func TestSanitizeFSPath_Valid(t *testing.T) {
 	cases := []string{"/Freebox/VMs", "/Freebox/Downloads/file.iso", "/mnt/usb"}
@@ -115,14 +213,6 @@ func TestSanitizeFSPath_RootRejected(t *testing.T) {
 func TestFSList_TraversalBlocked(t *testing.T) {
 	s := newFSServer(t, mockGetter{})
 	req := callToolWithArgs(t, s, "freebox_fs_list", map[string]any{"path": "/../etc/passwd"})
-	if !req.IsError {
-		t.Error("path traversal should return error")
-	}
-}
-
-func TestFSDelete_TraversalBlocked(t *testing.T) {
-	s := newFSServer(t, mockGetter{})
-	req := callToolWithArgs(t, s, "freebox_fs_delete", map[string]any{"path": "/Freebox/../../etc"})
 	if !req.IsError {
 		t.Error("path traversal should return error")
 	}

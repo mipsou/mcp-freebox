@@ -8,6 +8,7 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -16,17 +17,23 @@ import (
 
 // VM reflects one entry from GET /api/v4/vm/
 type VM struct {
-	ID               int    `json:"id"`
-	Name             string `json:"name"`
-	Status           string `json:"status"`
-	Memory           int    `json:"memory"`
-	Vcpus            int    `json:"vcpus"`
-	DiskPath         string `json:"disk_path"`
-	DiskType         string `json:"disk_type"`
-	OS               string `json:"os"`
-	EnableScreen     bool   `json:"enable_screen"`
-	CloudinitEnabled bool   `json:"cloudinit_enabled"`
+	ID                int      `json:"id"`
+	Name              string   `json:"name"`
+	Status            string   `json:"status"`
+	Memory            int      `json:"memory"`
+	Vcpus             int      `json:"vcpus"`
+	DiskPath          string   `json:"disk_path"`
+	DiskType          string   `json:"disk_type"`
+	OS                string   `json:"os"`
+	EnableScreen      bool     `json:"enable_screen"`
+	CloudinitEnabled  bool     `json:"cloudinit_enabled"`
+	CloudinitUserdata string   `json:"cloudinit_userdata,omitempty"`
+	CDPath            string   `json:"cd_path,omitempty"`
+	BindUSBPorts      []string `json:"bind_usb_ports,omitempty"`
 }
+
+// maxCloudinitLen is the Freebox firmware limit for cloud-init userdata (Freebox bug FS#37547).
+const maxCloudinitLen = 4096
 
 func registerVM(s *server.MCPServer, c writer) {
 	// ── Liste ────────────────────────────────────────────────────────────────
@@ -125,6 +132,14 @@ func registerVM(s *server.MCPServer, c writer) {
 				mcp.Enum("fedora", "debian", "ubuntu", "unknown")),
 			mcp.WithBoolean("enable_screen",
 				mcp.Description("Activer l'écran virtuel VNC (défaut: false)")),
+			mcp.WithString("cloudinit_userdata",
+				mcp.Description("YAML cloud-init injecté au boot (SSH keys, packages, runcmd…). Limite 4096 caractères (utiliser #include https://... pour les configs plus longues).")),
+			mcp.WithString("cd_path",
+				mcp.Description("Chemin absolu vers une ISO à monter (ex: /Disque 1/ISO/debian-12-arm64.iso). Encodé base64 en interne.")),
+			mcp.WithArray("bind_usb_ports",
+				mcp.Description("Ports USB à passer à la VM (ex: usb-external-type-c, usb-external-type-a)."),
+				mcp.WithStringItems(),
+			),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			name := req.GetString("name", "")
@@ -140,11 +155,35 @@ func registerVM(s *server.MCPServer, c writer) {
 			diskType := req.GetString("disk_type", "")
 			osName := req.GetString("os", "unknown")
 			enableScreen := req.GetBool("enable_screen", false)
+
 			body := VM{
 				Name: name, Memory: memory, Vcpus: vcpus,
 				DiskPath: diskPath, DiskType: diskType,
 				OS: osName, EnableScreen: enableScreen,
 			}
+
+			if userdata := req.GetString("cloudinit_userdata", ""); userdata != "" {
+				if len(userdata) > maxCloudinitLen {
+					return mcp.NewToolResultError(
+						fmt.Sprintf("cloudinit_userdata dépasse la limite de %d caractères (utiliser #include https://... pour les configs plus longues)", maxCloudinitLen),
+					), nil
+				}
+				body.CloudinitEnabled = true
+				body.CloudinitUserdata = userdata
+			}
+
+			if cdRaw := req.GetString("cd_path", ""); cdRaw != "" {
+				clean, err := sanitizeFSPath(cdRaw)
+				if err != nil {
+					return mcp.NewToolResultError(fmt.Sprintf("cd_path : %v", err)), nil
+				}
+				body.CDPath = base64.StdEncoding.EncodeToString([]byte(clean))
+			}
+
+			if ports := req.GetStringSlice("bind_usb_ports", nil); len(ports) > 0 {
+				body.BindUSBPorts = ports
+			}
+
 			var created VM
 			if err := c.Post(ctx, "/vm/", body, &created); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
