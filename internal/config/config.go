@@ -37,7 +37,7 @@ func Load() (*Config, error) {
 }
 
 func (c *Config) BaseURL() string {
-	return "https://" + c.Host + "/api/v4"
+	return "https://" + c.Host + "/api/v9"
 }
 
 // DiscoveryURL returns the unauthenticated API version endpoint (HTTP, no /api/v4 prefix).

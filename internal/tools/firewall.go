@@ -15,7 +15,7 @@ import (
 
 // FirewallIncomingRule reflects one entry from GET /api/v4/fw/incoming/
 type FirewallIncomingRule struct {
-	ID      int    `json:"id"`
+	ID      string `json:"id"`
 	Enabled bool   `json:"enabled"`
 	Comment string `json:"comment"`
 	Action  string `json:"action"`   // accept, deny, drop
