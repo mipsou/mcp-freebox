@@ -45,7 +45,7 @@ jobs:
         uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false  # zizmor: cache disabled — avoids cache-poisoning attack surface
 
       - name: Build
         env:
@@ -74,11 +74,16 @@ jobs:
         run: syft scan "${BINARY}" -o spdx-json > "${BINARY}.spdx.json"
 
       - name: Publish assets to GitHub Release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
-        with:
-          generate_release_notes: true
-          make_latest: "true"
-          files: |
-            ${{ env.BINARY }}
-            ${{ env.BINARY }}.bundle
-            ${{ env.BINARY }}.spdx.json
+        # gh CLI is pre-installed on GitHub-hosted runners (zizmor preference over softprops/action-gh-release).
+        # Creates the release if it does not exist yet; falls back to upload-only if a sibling
+        # matrix job already created it (concurrent matrix jobs race on the same tag).
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes \
+            "${BINARY}" "${BINARY}.bundle" "${BINARY}.spdx.json" \
+          || gh release upload "${GITHUB_REF_NAME}" \
+            "${BINARY}" "${BINARY}.bundle" "${BINARY}.spdx.json" \
+            --clobber
