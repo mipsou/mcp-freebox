@@ -200,8 +200,8 @@ func TestDHCPConfigSet_MultipleFields(t *testing.T) {
 		"/dhcp/config/": DHCPConfig{Enabled: true, BootServer: "192.168.1.254"},
 	}})
 	result := callToolWithArgs(t, s, "freebox_dhcp_config_set", map[string]any{
-		"boot_server": "",
-		"boot_file":   "",
+		"boot_server":   "",
+		"boot_file":     "",
 		"sticky_assign": true,
 	})
 	if result.IsError {
