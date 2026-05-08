@@ -22,8 +22,7 @@ type ConnectionConfig struct {
 	RemoteAccessPort int    `json:"remote_access_port"`
 	RemoteAccessIP   string `json:"remote_access_ip"`
 	WakeOnLanPort    int    `json:"wol_port"`
-	AdblockEnabled   bool   `json:"adblock_enabled"`
-	AdblockMode      string `json:"adblock_mode"`
+	Adblock          bool   `json:"adblock"`
 }
 
 func registerConnectionConfig(s *server.MCPServer, c writer) {
@@ -55,11 +54,8 @@ func registerConnectionConfig(s *server.MCPServer, c writer) {
 			mcp.WithNumber("wol_port",
 				mcp.Description("Port UDP Wake-on-LAN (1–65535, ex: 9)"),
 				mcp.Min(1), mcp.Max(65535)),
-			mcp.WithBoolean("adblock_enabled",
+			mcp.WithBoolean("adblock",
 				mcp.Description("Activer le blocage de publicités DNS")),
-			mcp.WithString("adblock_mode",
-				mcp.Description("Mode de blocage publicitaire : all ou custom"),
-				mcp.Enum("all", "custom")),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			args := req.GetArguments()
@@ -76,11 +72,8 @@ func registerConnectionConfig(s *server.MCPServer, c writer) {
 			if v, ok := args["wol_port"]; ok && v != nil {
 				patch["wol_port"] = int(toFloat(v))
 			}
-			if v, ok := args["adblock_enabled"].(bool); ok {
-				patch["adblock_enabled"] = v
-			}
-			if v, ok := args["adblock_mode"].(string); ok && v != "" {
-				patch["adblock_mode"] = v
+			if v, ok := args["adblock"].(bool); ok {
+				patch["adblock"] = v
 			}
 			if len(patch) == 0 {
 				return mcp.NewToolResultError("aucun champ à modifier (fournir au moins un paramètre)"), nil
