@@ -24,8 +24,8 @@ func newLANConfigServer(t *testing.T, mock mockGetter) *server.MCPServer {
 func TestLanConfig_OK(t *testing.T) {
 	s := newLANConfigServer(t, mockGetter{
 		"/lan/config/": LanConfig{
-			IP: "192.168.1.254", Mask: "255.255.255.0",
-			NameDNS: "freebox", NameMDNS: "freebox", Mode: "router",
+			IP: "192.168.1.254", Name: "Freebox",
+			NameDNS: "freebox", NameMDNS: "freebox", Type: "router",
 		},
 	})
 	result := callTool(t, s, "freebox_lan_config")
@@ -47,8 +47,8 @@ func TestLanConfig_APIError(t *testing.T) {
 
 func TestLanHostRename_OK(t *testing.T) {
 	s := newLANConfigServer(t, mockGetter{
-		"/lan/browser/pub/ether-aa:bb:cc:dd:ee:ff": LanHostName{
-			ID: "ether-aa:bb:cc:dd:ee:ff", Name: "CoreOS-11", MAC: "aa:bb:cc:dd:ee:ff",
+		"/lan/browser/pub/ether-aa:bb:cc:dd:ee:ff": LanHost{
+			ID: "ether-aa:bb:cc:dd:ee:ff", PrimaryName: "CoreOS-11",
 		},
 	})
 	result := callToolWithArgs(t, s, "freebox_lan_host_rename", map[string]any{

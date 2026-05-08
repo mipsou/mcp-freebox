@@ -16,7 +16,7 @@ import (
 // WifiApStatus reflects the runtime status of a WiFi access point.
 type WifiApStatus struct {
 	State               string `json:"state"`
-	ChannelWidth        string `json:"channel_width"`
+	ChannelWidth        int    `json:"channel_width"` // largeur effective en MHz
 	PrimaryChannel      int    `json:"primary_channel"`
 	SecondaryChannel    int    `json:"secondary_channel"`
 	DfsCacRemainingTime int    `json:"dfs_cac_remaining_time"`
@@ -25,10 +25,9 @@ type WifiApStatus struct {
 // WifiApConfig reflects the configuration of a WiFi access point.
 type WifiApConfig struct {
 	Band           string `json:"band"`
-	ChannelWidth   string `json:"channel_width"`
+	ChannelWidth   int    `json:"channel_width"` // largeur souhaitée en MHz
 	PrimaryChannel int    `json:"primary_channel"`
-	Dfs            bool   `json:"dfs"`
-	Enabled        bool   `json:"enabled"`
+	DfsEnabled     bool   `json:"dfs_enabled"` // activer les canaux nécessitant DFS
 }
 
 // WifiAp reflects one entry from GET /api/v4/wifi/ap/

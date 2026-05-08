@@ -29,17 +29,6 @@ type FSEntry struct {
 	MimeType     string `json:"mimetype"`
 }
 
-// FSTask reflects the async task returned by mkdir/rm/mv/cp operations
-type FSTask struct {
-	ID       int    `json:"id"`
-	Type     string `json:"type"`  // mkdir | rm | mv | cp
-	State    string `json:"state"` // queued | running | done | failed
-	Error    string `json:"error"`
-	To       string `json:"to"`
-	From     string `json:"from"`
-	Progress int    `json:"progress"`
-}
-
 // encodeFSPath encodes an absolute Freebox path to standard base64 (with padding)
 // as required by the /fs/ API endpoints.
 // The Freebox API spec explicitly uses standard base64 (RFC 4648 §4) with "=" padding.
@@ -118,11 +107,11 @@ func registerFilesystem(s *server.MCPServer, c writer) {
 				"parent":  encodeFSPath(parent),
 				"dirname": name,
 			}
-			var task FSTask
-			if err := c.Post(ctx, "/fs/mkdir/", body, &task); err != nil {
+			var taskID string
+			if err := c.Post(ctx, "/fs/mkdir/", body, &taskID); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			return jsonResult(task)
+			return mcp.NewToolResultText(fmt.Sprintf("Répertoire '%s' créé. Tâche : %s", name, taskID)), nil
 		},
 	)
 
@@ -144,11 +133,11 @@ func registerFilesystem(s *server.MCPServer, c writer) {
 			body := map[string]any{
 				"files": []string{encodeFSPath(p)},
 			}
-			var task FSTask
-			if err := c.Post(ctx, "/fs/rm/", body, &task); err != nil {
+			var taskID string
+			if err := c.Post(ctx, "/fs/rm/", body, &taskID); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			return jsonResult(task)
+			return mcp.NewToolResultText(fmt.Sprintf("Suppression de '%s' en cours. Tâche : %s", p, taskID)), nil
 		},
 	)
 }

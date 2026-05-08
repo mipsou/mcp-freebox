@@ -32,10 +32,9 @@ type L3Connectivity struct {
 type LanHost struct {
 	ID                string           `json:"id"`
 	PrimaryName       string           `json:"primary_name"`
-	DefaultName       string           `json:"default_name"`
 	HostType          string           `json:"host_type"`
 	PrimaryNameManual bool             `json:"primary_name_manual"`
-	L2Ident           L2Ident          `json:"l2ident"`
+	L2Ident           []L2Ident        `json:"l2ident"`
 	VendorName        string           `json:"vendor_name"`
 	Persistent        bool             `json:"persistent"`
 	Reachable         bool             `json:"reachable"`

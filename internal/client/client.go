@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/mipsou/mcp-freebox/internal/auth"
 )
@@ -38,6 +39,19 @@ func (c *Client) Get(ctx context.Context, path string, dst any) error {
 // Post performs an authenticated POST with JSON body and decodes result into dst.
 func (c *Client) Post(ctx context.Context, path string, body any, dst any) error {
 	return c.do(ctx, http.MethodPost, path, body, dst)
+}
+
+// PostForm performs an authenticated POST with application/x-www-form-urlencoded body.
+// Required by endpoints like /downloads/add/ that reject application/json.
+func (c *Client) PostForm(ctx context.Context, path string, values url.Values, dst any) error {
+	encoded := []byte(values.Encode())
+	err := c.attempt(ctx, http.MethodPost, path, encoded, "application/x-www-form-urlencoded", dst)
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && apiErr.ErrorCode == "auth_required" {
+		c.auth.Invalidate()
+		return c.attempt(ctx, http.MethodPost, path, encoded, "application/x-www-form-urlencoded", dst)
+	}
+	return err
 }
 
 // Put performs an authenticated PUT with JSON body.
@@ -79,16 +93,16 @@ func (c *Client) do(ctx context.Context, method, path string, body, dst any) err
 		}
 	}
 
-	err := c.attempt(ctx, method, path, bodyBytes, dst)
+	err := c.attempt(ctx, method, path, bodyBytes, "application/json", dst)
 	var apiErr *APIError
 	if errors.As(err, &apiErr) && apiErr.ErrorCode == "auth_required" {
 		c.auth.Invalidate()
-		return c.attempt(ctx, method, path, bodyBytes, dst)
+		return c.attempt(ctx, method, path, bodyBytes, "application/json", dst)
 	}
 	return err
 }
 
-func (c *Client) attempt(ctx context.Context, method, path string, bodyBytes []byte, dst any) error {
+func (c *Client) attempt(ctx context.Context, method, path string, bodyBytes []byte, contentType string, dst any) error {
 	token, err := c.auth.Token()
 	if err != nil {
 		return fmt.Errorf("auth: %w", err)
@@ -105,7 +119,7 @@ func (c *Client) attempt(ctx context.Context, method, path string, bodyBytes []b
 	}
 	req.Header.Set("X-Fbx-App-Auth", token)
 	if len(bodyBytes) > 0 {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", contentType)
 	}
 
 	resp, err := c.http.Do(req)

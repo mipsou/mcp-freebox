@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -78,6 +79,14 @@ func (l *lazyClient) Post(ctx context.Context, path string, body, dst any) error
 		return err
 	}
 	return c.Post(ctx, path, body, dst)
+}
+
+func (l *lazyClient) PostForm(ctx context.Context, path string, values url.Values, dst any) error {
+	c, err := l.get()
+	if err != nil {
+		return err
+	}
+	return c.PostForm(ctx, path, values, dst)
 }
 
 func (l *lazyClient) Put(ctx context.Context, path string, body, dst any) error {

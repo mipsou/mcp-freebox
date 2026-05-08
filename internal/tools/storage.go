@@ -15,18 +15,19 @@ import (
 
 // StorageDisk reflects one entry from GET /api/v4/storage/disk/
 // connector is an integer enum (0=unknown, 1=USB, 2=eSATA, 3=PCIe, …).
-// id and partition IDs are numeric per the Freebox OS API spec.
+// id is numeric per the Freebox OS API spec.
+// partitions is an array of embedded StoragePartition objects (not IDs).
 type StorageDisk struct {
-	ID          int64   `json:"id"`
-	Type        string  `json:"type"`
-	Connector   int     `json:"connector"`
-	State       string  `json:"state"`
-	TotalBytes  int64   `json:"total_bytes"`
-	Idle        bool    `json:"idle"`
-	Spinning    bool    `json:"spinning"`
-	TableType   string  `json:"table_type"`
-	DisplayName string  `json:"display_name"`
-	Partitions  []int64 `json:"partitions"`
+	ID          int64              `json:"id"`
+	Type        string             `json:"type"`
+	Connector   int                `json:"connector"`
+	State       string             `json:"state"`
+	TotalBytes  int64              `json:"total_bytes"`
+	Idle        bool               `json:"idle"`
+	Spinning    bool               `json:"spinning"`
+	TableType   string             `json:"table_type"`
+	DisplayName string             `json:"display_name"`
+	Partitions  []StoragePartition `json:"partitions"`
 }
 
 // StoragePartition reflects one entry from GET /api/v4/storage/partition/

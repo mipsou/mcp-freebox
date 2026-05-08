@@ -9,6 +9,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -19,12 +20,25 @@ import (
 // mockWriter extends mockGetter with configurable mutation behaviour.
 type mockWriter struct {
 	mockGetter
-	postErrs   map[string]error
-	putErrs    map[string]error
-	deleteErrs map[string]error
+	postErrs     map[string]error
+	putErrs      map[string]error
+	deleteErrs   map[string]error
+	postFormVals map[string]url.Values // captures PostForm calls for assertion
 }
 
 func (m mockWriter) Post(_ context.Context, path string, _, _ any) error {
+	if err, ok := m.postErrs[path]; ok {
+		return err
+	}
+	return nil
+}
+
+// PostForm captures the form values for later assertion and returns nil unless
+// an error is configured via postErrs for the same path.
+func (m mockWriter) PostForm(_ context.Context, path string, values url.Values, _ any) error {
+	if m.postFormVals != nil {
+		m.postFormVals[path] = values
+	}
 	if err, ok := m.postErrs[path]; ok {
 		return err
 	}
