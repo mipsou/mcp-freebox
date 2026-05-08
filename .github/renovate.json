@@ -1,6 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    "security:openssf-scorecard"
+  ],
 
   "baseBranches": ["dev"],
   "timezone": "Europe/Paris",
@@ -11,49 +15,79 @@
   "commitMessageAction": "bump",
 
   "separateMajorMinor": true,
+  "separateMultipleMajor": true,
   "rangeStrategy": "pin",
+
+  "minimumReleaseAge": "3 days",
+  "internalChecksAsSuccess": true,
+  "platformAutomerge": true,
+
+  "prConcurrentLimit": 8,
+  "prHourlyLimit": 4,
+
+  "vulnerabilityAlerts": {
+    "description": "Alertes de sécurité — PR immédiate hors schedule, label security",
+    "labels": ["security", "dependencies"],
+    "schedule": ["at any time"],
+    "automerge": false
+  },
+
+  "osvVulnerabilityAlerts": true,
+
+  "lockFileMaintenance": {
+    "description": "Maintien de go.sum — nettoyage hebdomadaire",
+    "enabled": true,
+    "schedule": ["before 6am on Monday"],
+    "automerge": true
+  },
 
   "packageRules": [
     {
-      "description": "GitHub Actions — maintien automatique des SHA + commentaire version",
+      "description": "GitHub Actions — SHA pins auto-maintenus + commentaire version. Automerge car zizmor+CI valident chaque mise a jour.",
       "matchManagers": ["github-actions"],
       "groupName": "github-actions",
       "pinDigests": true,
-      "automerge": false
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
     },
     {
-      "description": "Go toolchain — mise a jour de la directive go X.Y.Z dans go.mod (resoud les CVEs stdlib automatiquement)",
+      "description": "Go toolchain — mise a jour de la directive go X.Y.Z dans go.mod (resoud les CVEs stdlib). Review manuelle : peut impacter compatibilite.",
       "matchManagers": ["gomod"],
       "matchDepTypes": ["golang"],
       "groupName": "go-toolchain",
       "automerge": false
     },
     {
-      "description": "Go modules — patch et minor groupes",
+      "description": "Go modules patch+minor+digest — groupes et automerge car tests+govulncheck+lint valident.",
       "matchManagers": ["gomod"],
       "matchDepTypes": ["require"],
       "matchUpdateTypes": ["patch", "minor", "digest"],
       "groupName": "go-deps",
-      "automerge": false
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
     },
     {
-      "description": "Go modules — majeurs separes (breaking changes)",
+      "description": "Go modules majeurs — breaking changes, review manuelle obligatoire.",
       "matchManagers": ["gomod"],
       "matchDepTypes": ["require"],
       "matchUpdateTypes": ["major"],
-      "automerge": false
+      "automerge": false,
+      "labels": ["dependencies", "breaking-change"]
     }
   ],
 
   "customManagers": [
     {
-      "description": "govulncheck version epinglee dans ci.yml",
+      "description": "govulncheck version epinglee dans ci.yml — suivi semver via datasource Go.",
       "customType": "regex",
       "fileMatch": ["^\\.github/workflows/.*\\.yml$"],
       "matchStrings": ["govulncheck@(?<currentValue>v[\\d.]+)"],
       "depNameTemplate": "golang.org/x/vuln",
       "datasourceTemplate": "go",
-      "versioningTemplate": "semver"
+      "versioningTemplate": "semver",
+      "automerge": true
     }
   ]
 }
