@@ -27,6 +27,7 @@ type mockWriter struct {
 	deleteErrs   map[string]error
 	postFormVals map[string]url.Values // captures PostForm calls for assertion
 	postBodies   map[string]any        // captures Post body for assertion
+	putBodies    map[string]any        // captures Put body for assertion
 }
 
 func (m mockWriter) Post(_ context.Context, path string, body, _ any) error {
@@ -51,7 +52,10 @@ func (m mockWriter) PostForm(_ context.Context, path string, values url.Values, 
 	return nil
 }
 
-func (m mockWriter) Put(_ context.Context, path string, _, _ any) error {
+func (m mockWriter) Put(_ context.Context, path string, body, _ any) error {
+	if m.putBodies != nil {
+		m.putBodies[path] = body
+	}
 	if err, ok := m.putErrs[path]; ok {
 		return err
 	}
@@ -323,6 +327,79 @@ func TestVMUpdate_OK(t *testing.T) {
 	})
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
+	}
+}
+
+// TestVMUpdate_ReadModifyWrite_PreservesUnchanged guards #80: l'API Freebox
+// PUT /vm/{id} exige un body complet. Le handler doit GET l'état courant,
+// patcher les champs demandés, et PUT le tout — sans perdre les champs non
+// patchés (disk_path, os, etc.).
+func TestVMUpdate_ReadModifyWrite_PreservesUnchanged(t *testing.T) {
+	bodies := map[string]any{}
+	current := VM{
+		ID: 3, Name: "old", Status: "stopped",
+		Memory: 256, Vcpus: 1,
+		DiskPath: "L0Rpc3F1ZSAxL1ZNcy90ZXN0LnFjb3cy", DiskType: "qcow2", OS: "debian",
+		EnableScreen: false,
+	}
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{"/vm/3": current},
+		putBodies:  bodies,
+	})
+	callToolWithArgs(t, s, "freebox_vm_update", map[string]any{
+		"id": float64(3), "name": "renamed", "memory": float64(512),
+	})
+	body, ok := bodies["/vm/3"].(VM)
+	if !ok {
+		t.Fatalf("PUT body type = %T, want VM (full struct)", bodies["/vm/3"])
+	}
+	if body.Name != "renamed" {
+		t.Errorf("name = %q, want renamed", body.Name)
+	}
+	if body.Memory != 512 {
+		t.Errorf("memory = %d, want 512", body.Memory)
+	}
+	if body.Vcpus != 1 {
+		t.Errorf("vcpus = %d, want 1 (unchanged)", body.Vcpus)
+	}
+	if body.DiskPath != current.DiskPath {
+		t.Errorf("disk_path = %q, want preserved %q", body.DiskPath, current.DiskPath)
+	}
+	if body.OS != "debian" {
+		t.Errorf("os = %q, want preserved debian", body.OS)
+	}
+	if body.ID != 3 {
+		t.Errorf("id = %d, want 3 (echoed back)", body.ID)
+	}
+}
+
+// TestVMUpdate_EnableScreenToggle vérifie que enable_screen passe correctement
+// de false à true dans le PUT body après modification.
+func TestVMUpdate_EnableScreenToggle(t *testing.T) {
+	bodies := map[string]any{}
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{"/vm/0": VM{ID: 0, Name: "vm", EnableScreen: false}},
+		putBodies:  bodies,
+	})
+	callToolWithArgs(t, s, "freebox_vm_update", map[string]any{
+		"id": float64(0), "enable_screen": true,
+	})
+	body := bodies["/vm/0"].(VM)
+	if !body.EnableScreen {
+		t.Errorf("enable_screen = %v, want true", body.EnableScreen)
+	}
+}
+
+// TestVMUpdate_GetError propage proprement l'erreur du GET initial.
+func TestVMUpdate_GetError(t *testing.T) {
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{}, // /vm/99 absent → erreur GET
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_update", map[string]any{
+		"id": float64(99), "name": "x",
+	})
+	if !result.IsError {
+		t.Error("expected error when GET /vm/99 fails")
 	}
 }
 
