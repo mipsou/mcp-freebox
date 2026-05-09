@@ -9,6 +9,11 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-05-09
+
+### Corrigé
+- `freebox_lan_host_update` : enum `host_type` étendu de 24 → **27 valeurs** (miroir complet de la web UI Freebox). Ajout : `freebox_crystal` (Freebox v6 Crystal), `car` (véhicule connecté), et alignement avec les 7 modèles Freebox players de l'UI (Player, HD, Crystal, Mini, Delta, One, Pop). "Freebox Wi-Fi Pop" UI n'a pas de mapping API distinct (sondé exhaustivement) — probablement classé en interne comme `freebox_pop` ou `networking_device`.
+
 ## [0.41.0] - 2026-05-09
 
 ### Corrigé — host_type enum 11 → 24 valeurs

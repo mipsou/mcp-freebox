@@ -38,6 +38,20 @@ const CANDIDATES = [
   // alias possibles
   'pc', 'phone', 'mobile', 'console', 'tv', 'router', 'access_point',
   'firebox',
+  // user push : 3 types absents — sonder leurs noms exacts
+  'freebox_crystal', 'freebox_wifi_pop', 'freebox_pop_wifi',
+  'connected_vehicle', 'vehicle', 'car', 'connected_car',
+  // Wi-Fi Pop extender variants
+  'wifi_pop', 'pop_extender', 'freebox_extender', 'extender',
+  'repeater', 'wifi_repeater', 'mesh', 'mesh_node', 'fbx_wifi_pop',
+  'fbx_pop_wifi', 'freebox_repeater', 'freebox_mesh',
+  'pop_wifi', 'wifipop', 'popwifi', 'freebox_companion',
+  'pop_companion', 'freebox_pop_companion', 'freebox_pop_extender',
+  'freebox_pop_v2', 'freebox_pop_2', 'freebox_pop_wifi_extender',
+  'pop_amplifier', 'freebox_amplifier', 'wifi_amplifier',
+  'freebox_satellite', 'satellite', 'companion',
+  // domotique sonore éventuelle
+  'speaker_voice',
 ];
 
 const BIN = resolve(process.cwd(), 'freebox-mcp.exe');
