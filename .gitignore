@@ -13,4 +13,6 @@
 /sniff-output.json
 /tier1-runtime.log
 /vm-update-runtime.log
+/vm-disk-resize-runtime.log
+/probe-vm-disk-task-error.log
 /.claude/

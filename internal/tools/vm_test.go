@@ -567,3 +567,168 @@ func TestVMList_RealPayload_BindUSBPortsEmptyString(t *testing.T) {
 		t.Errorf("unexpected decode: %+v", vms)
 	}
 }
+
+// ── vm_disk_resize / vm_disk_task (#85) ──────────────────────────────────────
+
+func TestVMDiskResize_PostBodyShape(t *testing.T) {
+	bodies := map[string]any{}
+	const diskPath = "L0Rpc3F1ZSAxL1ZNcy90ZXN0LnFjb3cy" // base64 du chemin
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{
+			"/vm/3":           VM{ID: 3, Status: "stopped", DiskPath: diskPath},
+			"/vm/disk/resize": VMDiskTask{ID: 42, Type: "resize_disk", State: "queued"},
+		},
+		postBodies: bodies,
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_disk_resize", map[string]any{
+		"id":           float64(3),
+		"size_gb":      float64(20),
+		"allow_shrink": false,
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	body, ok := bodies["/vm/disk/resize"].(vmDiskResizeRequest)
+	if !ok {
+		t.Fatalf("POST body type = %T, want vmDiskResizeRequest", bodies["/vm/disk/resize"])
+	}
+	if body.DiskPath != diskPath {
+		t.Errorf("disk_path = %q, want %q (preserved from VM)", body.DiskPath, diskPath)
+	}
+	if body.Size != 20*1024*1024*1024 {
+		t.Errorf("size = %d, want 21474836480 (20 GiB)", body.Size)
+	}
+	if body.ShrinkAllow {
+		t.Error("shrink_allow should be false by default")
+	}
+}
+
+func TestVMDiskResize_RejectsRunningVM(t *testing.T) {
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{
+			"/vm/0": VM{ID: 0, Status: "running", DiskPath: "x"},
+		},
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_disk_resize", map[string]any{
+		"id": float64(0), "size_gb": float64(10),
+	})
+	if !result.IsError {
+		t.Error("expected error for running VM")
+	}
+}
+
+func TestVMDiskResize_RejectsZeroSize(t *testing.T) {
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{"/vm/0": VM{ID: 0, Status: "stopped"}},
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_disk_resize", map[string]any{
+		"id": float64(0), "size_gb": float64(0),
+	})
+	if !result.IsError {
+		t.Error("expected error for size_gb=0")
+	}
+}
+
+func TestVMDiskResize_AllowShrinkPropagates(t *testing.T) {
+	bodies := map[string]any{}
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{
+			"/vm/0":           VM{ID: 0, Status: "stopped", DiskPath: "x"},
+			"/vm/disk/resize": VMDiskTask{ID: 1},
+		},
+		postBodies: bodies,
+	})
+	callToolWithArgs(t, s, "freebox_vm_disk_resize", map[string]any{
+		"id": float64(0), "size_gb": float64(5), "allow_shrink": true,
+	})
+	body := bodies["/vm/disk/resize"].(vmDiskResizeRequest)
+	if !body.ShrinkAllow {
+		t.Error("shrink_allow=true should propagate")
+	}
+}
+
+func TestVMDiskCreate_PostBodyShape(t *testing.T) {
+	bodies := map[string]any{}
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{"/vm/disk/create": VMDiskTask{ID: 7, Type: "create_disk"}},
+		postBodies: bodies,
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_disk_create", map[string]any{
+		"disk_name": "fresh.qcow2",
+		"disk_dir":  "/Disque 1/VMs/",
+		"size_gb":   float64(5),
+		"disk_type": "qcow2",
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	body := bodies["/vm/disk/create"].(vmDiskCreateRequest)
+	if body.Size != 5*1024*1024*1024 {
+		t.Errorf("size = %d, want 5 GiB", body.Size)
+	}
+	if body.DiskType != "qcow2" {
+		t.Errorf("disk_type = %q, want qcow2", body.DiskType)
+	}
+	// disk_path doit être base64 du chemin propre
+	wantPath := base64.StdEncoding.EncodeToString([]byte("/Disque 1/VMs/fresh.qcow2"))
+	if body.DiskPath != wantPath {
+		t.Errorf("disk_path = %q, want %q", body.DiskPath, wantPath)
+	}
+}
+
+func TestVMDiskCreate_RejectsBadDiskName(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
+	result := callToolWithArgs(t, s, "freebox_vm_disk_create", map[string]any{
+		"disk_name": "../etc/passwd.qcow2",
+		"disk_dir":  "/Disque 1/VMs/",
+		"size_gb":   float64(1),
+		"disk_type": "qcow2",
+	})
+	if !result.IsError {
+		t.Error("path traversal in disk_name should error")
+	}
+}
+
+func TestVMDiskTask_OK(t *testing.T) {
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{
+			"/vm/disk/task/42": VMDiskTask{ID: 42, Type: "resize_disk", State: "done", Progress: 100, Done: true},
+		},
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_disk_task", map[string]any{
+		"task_id": float64(42),
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	text := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(text, `"state": "done"`) {
+		t.Errorf("task content missing state=done: %s", text)
+	}
+}
+
+func TestVMDiskTaskDelete_OK(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
+	result := callToolWithArgs(t, s, "freebox_vm_disk_task_delete", map[string]any{
+		"task_id": float64(99),
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, "99") {
+		t.Errorf("expected task id in response, got: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+}
+
+func TestVMDiskTaskDelete_APIError(t *testing.T) {
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{},
+		deleteErrs: map[string]error{"/vm/disk/task/99": fmt.Errorf("task not found")},
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_disk_task_delete", map[string]any{
+		"task_id": float64(99),
+	})
+	if !result.IsError {
+		t.Error("expected tool error result")
+	}
+}
