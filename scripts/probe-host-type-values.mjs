@@ -8,13 +8,36 @@ const TOKEN = process.env.FREEBOX_APP_TOKEN;
 if (!TOKEN) { console.error('no token'); process.exit(1); }
 
 const TARGET_VENDOR = 'Nest Labs Inc.';
+// Brute-force plus large : doc v4 + extensions hacf-fr + candidats domotique
+// usuels pour découvrir les ajouts non documentés de l'API v15.
 const CANDIDATES = [
-  'workstation', 'laptop', 'smartphone', 'tablet',
-  'printer', 'tv', 'nas', 'networking_device',
-  'freebox_player', 'freebox_pop', 'freebox_server',
-  'appliances', 'iot', 'other',
-  'fbx_iot', 'iot_device', 'smart_device',
-  'router', 'switch', 'access_point',
+  // doc v4 dev.freebox.fr (15)
+  'workstation', 'laptop', 'smartphone', 'tablet', 'printer',
+  'vg_console', 'television', 'nas', 'ip_camera', 'ip_phone',
+  'freebox_player', 'freebox_hd', 'networking_device',
+  'multimedia_device', 'other',
+  // déjà sondé OK
+  'freebox_pop', 'appliances',
+  // hacf-fr extras
+  'freebox_delta', 'freebox_mini', 'freebox_revolution', 'freebox_one',
+  'freebox_server',
+  // candidates domotiques smart-home
+  'voice_assistant', 'smart_speaker', 'google_home', 'amazon_echo',
+  'thermostat', 'light', 'lighting', 'smart_light',
+  'door_bell', 'doorbell', 'lock', 'smart_lock',
+  'robot', 'robot_vacuum', 'vacuum_cleaner', 'vacuum',
+  'camera', 'security_camera', 'webcam',
+  'weather_station', 'sensor', 'iot_sensor', 'smart_sensor',
+  'wearable', 'watch', 'smartwatch', 'health_device',
+  'hub', 'smart_hub', 'gateway', 'bridge',
+  'shutter', 'shutters', 'switch', 'plug', 'smart_plug', 'outlet',
+  'wallbox', 'ev_charger',
+  'solar', 'inverter',
+  'audio', 'speaker', 'video', 'streaming_device',
+  'fbx', 'home', 'connected', 'iot',
+  // alias possibles
+  'pc', 'phone', 'mobile', 'console', 'tv', 'router', 'access_point',
+  'firebox',
 ];
 
 const BIN = resolve(process.cwd(), 'freebox-mcp.exe');

@@ -9,6 +9,23 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-05-09
+
+### Corrigé — host_type enum 11 → 24 valeurs
+
+L'enum `host_type` de `freebox_lan_host_update` (introduit en v0.40.0) était grossièrement incomplet (11 valeurs sur les 24 réellement acceptées par l'API).
+
+**Découverte en deux étapes** :
+1. La doc officielle [dev.freebox.fr/sdk/os/lan/](https://dev.freebox.fr/sdk/os/lan/) (figée v4) liste 15 valeurs dont 6 que j'avais ratées : `vg_console`, `television`, `ip_camera`, `ip_phone`, `freebox_hd`, `multimedia_device`.
+2. Sondage brute-force runtime sur firmware 4.9.18.1 (~80 candidats) → **8 valeurs supplémentaires non documentées** : `light`, `thermostat`, `watch`, `shutter`, `outlet`, `freebox_delta`, `freebox_mini`, `freebox_one`. Justifie la memory "Doc Freebox v4 ≠ API live v15".
+
+**Set total validé runtime = 24 valeurs**, contraints via `mcp.Enum` : workstation, laptop, smartphone, tablet, printer, vg_console, television, multimedia_device, nas, networking_device, ip_camera, ip_phone, freebox_player, freebox_pop, freebox_hd, freebox_delta, freebox_mini, freebox_one, thermostat, light, watch, shutter, outlet, appliances, other.
+
+**Note** : pas de type `iot`, `sensor`, `doorbell`, `lock`, `robot`, `camera` générique, `weather_station`, `smoke_detector`, `scale` — pour ces cas, utiliser `other`.
+
+### Outillage
+- `scripts/apply-lan-host-types.mjs` : reclassification batch des hosts LAN appliquée runtime (Home Assistant, jeedom, xigmanas → nas; SLZB/Hue/Trådfri → networking_device; Elgato Key Light → light; iRobot/Nest/Netatmo/Withings → other).
+
 ## [0.40.0] - 2026-05-09
 
 ### Corrigé — bug bloquant freebox_lan_hosts
