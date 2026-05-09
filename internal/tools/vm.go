@@ -73,6 +73,42 @@ type vmCreateRequest struct {
 // maxCloudinitLen is the Freebox firmware limit for cloud-init userdata (Freebox bug FS#37547).
 const maxCloudinitLen = 4096
 
+// VMDiskTask reflects the async task returned by POST /api/v15/vm/disk/resize
+// et POST /api/v15/vm/disk/create. Polled via GET /api/v15/vm/disk/task/{id}.
+// Note : `error` est un bool (présence d'erreur), `error_message` est le texte
+// associé. C'est différent de FSTask où `error` est une chaîne.
+type VMDiskTask struct {
+	ID           int    `json:"id"`
+	Type         string `json:"type"`                    // create_disk | resize_disk
+	State        string `json:"state"`                   // queued | running | done | failed
+	Error        bool   `json:"error"`                   // true si erreur
+	ErrorMessage string `json:"error_message,omitempty"` // message d'erreur si error=true
+	Progress     int    `json:"progress"`                // 0..100
+	DiskPath     string `json:"disk_path,omitempty"`
+	Done         bool   `json:"done"`
+	DurationLeft int    `json:"duration_left,omitempty"`
+}
+
+// vmDiskResizeRequest is the body sent to POST /api/v15/vm/disk/resize.
+// disk_path is the existing disk's path, base64-encoded (same format as VM.DiskPath).
+// shrink_allow doit être true uniquement si on diminue la taille (DESTRUCTIF).
+type vmDiskResizeRequest struct {
+	DiskPath    string `json:"disk_path"`
+	Size        int64  `json:"size"`
+	ShrinkAllow bool   `json:"shrink_allow"`
+}
+
+// vmDiskCreateRequest is the body sent to POST /api/v15/vm/disk/create.
+// disk_path est le chemin absolu base64-encoded où créer le fichier.
+type vmDiskCreateRequest struct {
+	DiskPath string `json:"disk_path"`
+	Size     int64  `json:"size"`
+	DiskType string `json:"disk_type"` // qcow2 | raw
+}
+
+// bytesPerGB is the conversion factor used by the Freebox API (binary GB / GiB).
+const bytesPerGB = 1024 * 1024 * 1024
+
 func registerVM(s *server.MCPServer, c writer) {
 	// ── Liste ────────────────────────────────────────────────────────────────
 	s.AddTool(
@@ -305,6 +341,120 @@ func registerVM(s *server.MCPServer, c writer) {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return mcp.NewToolResultText(fmt.Sprintf("VM %d supprimée.", id)), nil
+		},
+	)
+
+	// ── Redimensionner le disque ─────────────────────────────────────────────
+	// Cas typique : image cloud (~500 Mo) à étendre à la taille cible avant
+	// premier boot (cloudinit cloudgrowfs grossira la partition au boot).
+	s.AddTool(
+		mcp.NewTool("freebox_vm_disk_resize",
+			mcp.WithDescription("Redimensionne le disque qcow2 d'une VM. La VM doit être arrêtée. Réduire la taille (allow_shrink=true) est destructif. Opération asynchrone : retourne une tâche, à suivre avec freebox_vm_disk_task."),
+			mcp.WithNumber("id",
+				mcp.Required(),
+				mcp.Description("Identifiant de la VM (voir freebox_vm_list)")),
+			mcp.WithNumber("size_gb",
+				mcp.Required(),
+				mcp.Description("Nouvelle taille du disque en GiB (1 GiB = 1024^3 octets)")),
+			mcp.WithBoolean("allow_shrink",
+				mcp.Description("Autorise la réduction de taille (DESTRUCTIF — perte de données possible). Défaut: false")),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			id := req.GetInt("id", 0)
+			sizeGB := toFloat(req.GetArguments()["size_gb"])
+			if sizeGB <= 0 {
+				return mcp.NewToolResultError("size_gb doit être > 0"), nil
+			}
+			allowShrink := req.GetBool("allow_shrink", false)
+
+			// Récupère le disk_path actuel (déjà base64) depuis la VM.
+			var vm VM
+			if err := c.Get(ctx, fmt.Sprintf("/vm/%d", id), &vm); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			if vm.Status == "running" {
+				return mcp.NewToolResultError(fmt.Sprintf("VM %d est en cours d'exécution — l'arrêter avant resize (freebox_vm_stop)", id)), nil
+			}
+
+			body := vmDiskResizeRequest{
+				DiskPath:    vm.DiskPath,
+				Size:        int64(sizeGB * float64(bytesPerGB)),
+				ShrinkAllow: allowShrink,
+			}
+			var task VMDiskTask
+			if err := c.Post(ctx, "/vm/disk/resize", body, &task); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(task)
+		},
+	)
+
+	// ── Créer un disque qcow2/raw vide ───────────────────────────────────────
+	// Utile en amont de freebox_vm_create quand on veut un disque "blank" plutôt
+	// qu'une image cloud uploadée. Opération asynchrone (task à suivre via
+	// freebox_vm_disk_task).
+	s.AddTool(
+		mcp.NewTool("freebox_vm_disk_create",
+			mcp.WithDescription("Crée un fichier disque virtuel vide (qcow2 ou raw) sur le stockage Freebox. Pré-requis avant freebox_vm_create si l'image n'est pas déjà uploadée. Opération asynchrone : retourne une tâche, à suivre avec freebox_vm_disk_task."),
+			mcp.WithString("disk_name",
+				mcp.Required(),
+				mcp.Description("Nom du fichier disque (ex: my-vm.qcow2)"),
+				mcp.Pattern(DiskNamePattern)),
+			mcp.WithString("disk_dir",
+				mcp.Required(),
+				mcp.Description("Répertoire absolu du disque sur le stockage Freebox (ex: /Disque 1/VMs/). Utiliser freebox_storage_partitions pour découvrir les chemins.")),
+			mcp.WithNumber("size_gb",
+				mcp.Required(),
+				mcp.Description("Taille du disque en GiB (1 GiB = 1024^3 octets)")),
+			mcp.WithString("disk_type",
+				mcp.Required(),
+				mcp.Description("Type : qcow2 ou raw"),
+				mcp.Enum("qcow2", "raw")),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			diskName := req.GetString("disk_name", "")
+			if err := validateDiskName(diskName); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			diskDir := req.GetString("disk_dir", "")
+			cleanDir, err := sanitizeFSPath(diskDir)
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("disk_dir : %v", err)), nil
+			}
+			sizeGB := toFloat(req.GetArguments()["size_gb"])
+			if sizeGB <= 0 {
+				return mcp.NewToolResultError("size_gb doit être > 0"), nil
+			}
+			diskType := req.GetString("disk_type", "qcow2")
+
+			body := vmDiskCreateRequest{
+				DiskPath: base64.StdEncoding.EncodeToString([]byte(cleanDir + "/" + diskName)),
+				Size:     int64(sizeGB * float64(bytesPerGB)),
+				DiskType: diskType,
+			}
+			var task VMDiskTask
+			if err := c.Post(ctx, "/vm/disk/create", body, &task); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(task)
+		},
+	)
+
+	// ── Statut d'une tâche disque (resize, create_disk) ──────────────────────
+	s.AddTool(
+		mcp.NewTool("freebox_vm_disk_task",
+			mcp.WithDescription("Récupère le statut d'une tâche disque VM (resize, create_disk). Utilisé pour suivre une opération longue après freebox_vm_disk_resize."),
+			mcp.WithNumber("task_id",
+				mcp.Required(),
+				mcp.Description("Identifiant de la tâche (champ id retourné par freebox_vm_disk_resize)")),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			tid := req.GetInt("task_id", 0)
+			var task VMDiskTask
+			if err := c.Get(ctx, fmt.Sprintf("/vm/disk/task/%d", tid), &task); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(task)
 		},
 	)
 }
