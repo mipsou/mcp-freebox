@@ -50,3 +50,30 @@ func TestLanHosts_APIError(t *testing.T) {
 		t.Error("expected tool error result")
 	}
 }
+
+func TestLanInterfaces_OK(t *testing.T) {
+	s := newLANServer(t, mockGetter{
+		"/lan/browser/interfaces/": []LanInterface{
+			{Name: "pub", HostCount: 12},
+			{Name: "guest", HostCount: 3},
+		},
+	})
+	result := callTool(t, s, "freebox_lan_interfaces")
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"name": "pub"`) {
+		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"host_count": 12`) {
+		t.Errorf("missing host_count: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+}
+
+func TestLanInterfaces_APIError(t *testing.T) {
+	s := newLANServer(t, mockGetter{})
+	result := callTool(t, s, "freebox_lan_interfaces")
+	if !result.IsError {
+		t.Error("expected tool error result")
+	}
+}

@@ -43,6 +43,14 @@ type LanHost struct {
 	L3Connectivities  []L3Connectivity `json:"l3connectivities"`
 }
 
+// LanInterface reflects une interface LAN listée par /lan/browser/interfaces/.
+// La Freebox expose typiquement deux interfaces : "pub" (LAN principal) et
+// "guest" (réseau invité), avec le nombre d'hôtes vus sur chacune.
+type LanInterface struct {
+	Name      string `json:"name"`
+	HostCount int    `json:"host_count"`
+}
+
 func registerLAN(s *server.MCPServer, c getter) {
 	s.AddTool(
 		mcp.NewTool("freebox_lan_hosts",
@@ -54,6 +62,19 @@ func registerLAN(s *server.MCPServer, c getter) {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(hosts)
+		},
+	)
+
+	s.AddTool(
+		mcp.NewTool("freebox_lan_interfaces",
+			mcp.WithDescription("Liste les interfaces LAN exposées par la Freebox (par exemple 'pub' = LAN principal, 'guest' = réseau invité) avec le nombre d'hôtes vus sur chacune."),
+		),
+		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			var ifaces []LanInterface
+			if err := c.Get(ctx, "/lan/browser/interfaces/", &ifaces); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(ifaces)
 		},
 	)
 }
