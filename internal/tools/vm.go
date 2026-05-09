@@ -7,46 +7,67 @@
 package tools
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// BindUSBPorts handles the Freebox API quirk: when no USB port is bound, the
+// API returns "" (empty string) instead of [] (empty array). A custom
+// UnmarshalJSON keeps the Go-side type as a slice while tolerating both shapes.
+type BindUSBPorts []string
+
+func (b *BindUSBPorts) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) || bytes.Equal(trimmed, []byte(`""`)) {
+		*b = nil
+		return nil
+	}
+	var arr []string
+	if err := json.Unmarshal(trimmed, &arr); err != nil {
+		return err
+	}
+	*b = arr
+	return nil
+}
+
 // VM reflects one entry from GET /api/v4/vm/
 type VM struct {
-	ID                int      `json:"id"`
-	Name              string   `json:"name"`
-	Status            string   `json:"status"`
-	Memory            int      `json:"memory"`
-	Vcpus             int      `json:"vcpus"`
-	DiskPath          string   `json:"disk_path"`
-	DiskType          string   `json:"disk_type"`
-	OS                string   `json:"os"`
-	EnableScreen      bool     `json:"enable_screen"`
-	CloudinitEnabled  bool     `json:"cloudinit_enabled"`
-	CloudinitUserdata string   `json:"cloudinit_userdata,omitempty"`
-	CDPath            string   `json:"cd_path,omitempty"`
-	BindUSBPorts      []string `json:"bind_usb_ports,omitempty"`
+	ID                int          `json:"id"`
+	Name              string       `json:"name"`
+	Status            string       `json:"status"`
+	Memory            int          `json:"memory"`
+	Vcpus             int          `json:"vcpus"`
+	DiskPath          string       `json:"disk_path"`
+	DiskType          string       `json:"disk_type"`
+	OS                string       `json:"os"`
+	EnableScreen      bool         `json:"enable_screen"`
+	CloudinitEnabled  bool         `json:"cloudinit_enabled"`
+	CloudinitUserdata string       `json:"cloudinit_userdata,omitempty"`
+	CDPath            string       `json:"cd_path,omitempty"`
+	BindUSBPorts      BindUSBPorts `json:"bind_usb_ports,omitempty"`
 }
 
 // vmCreateRequest is the body sent to POST /api/v4/vm/.
 // It intentionally omits id and status (server-assigned fields): including
 // them as zero-values causes the Freebox API to return invalid_request.
 type vmCreateRequest struct {
-	Name              string   `json:"name"`
-	Memory            int      `json:"memory"`
-	Vcpus             int      `json:"vcpus"`
-	DiskPath          string   `json:"disk_path"`
-	DiskType          string   `json:"disk_type"`
-	OS                string   `json:"os"`
-	EnableScreen      bool     `json:"enable_screen"`
-	CloudinitEnabled  bool     `json:"cloudinit_enabled"`
-	CloudinitUserdata string   `json:"cloudinit_userdata,omitempty"`
-	CDPath            string   `json:"cd_path,omitempty"`
-	BindUSBPorts      []string `json:"bind_usb_ports,omitempty"`
+	Name              string       `json:"name"`
+	Memory            int          `json:"memory"`
+	Vcpus             int          `json:"vcpus"`
+	DiskPath          string       `json:"disk_path"`
+	DiskType          string       `json:"disk_type"`
+	OS                string       `json:"os"`
+	EnableScreen      bool         `json:"enable_screen"`
+	CloudinitEnabled  bool         `json:"cloudinit_enabled"`
+	CloudinitUserdata string       `json:"cloudinit_userdata,omitempty"`
+	CDPath            string       `json:"cd_path,omitempty"`
+	BindUSBPorts      BindUSBPorts `json:"bind_usb_ports,omitempty"`
 }
 
 // maxCloudinitLen is the Freebox firmware limit for cloud-init userdata (Freebox bug FS#37547).
