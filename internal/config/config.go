@@ -9,6 +9,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -35,6 +36,9 @@ func Load() (*Config, error) {
 	}
 	if cfg.Host == "" {
 		return nil, fmt.Errorf("FREEBOX_HOST must not be empty")
+	}
+	if !strings.HasPrefix(cfg.APIBase, "/") {
+		return nil, fmt.Errorf("FREEBOX_API_BASE must start with '/' (got %q)", cfg.APIBase)
 	}
 	return cfg, nil
 }
