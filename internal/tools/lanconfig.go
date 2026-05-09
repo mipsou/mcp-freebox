@@ -82,7 +82,7 @@ func registerLANConfig(s *server.MCPServer, c writer) {
 			mcp.WithString("primary_name",
 				mcp.Description("Nouveau nom (optionnel)")),
 			mcp.WithString("host_type",
-				mcp.Description("Nouveau type. Set étendu validé runtime sur firmware 4.9.18.1 (24 valeurs). La doc dev.freebox.fr/sdk/os/lan/ est figée v4 et incomplète — le firmware actuel ajoute notamment les types domotiques: light (lampes Hue/Elgato), thermostat (Nest), shutter (volets), outlet (prises), watch (montres). Pas de type 'iot', 'sensor', 'doorbell', 'lock', 'robot', 'camera' générique — pour ces cas, utiliser 'other'."),
+				mcp.Description("Nouveau type. Set complet validé runtime sur firmware 4.9.18.1 (27 valeurs, miroir de la web UI Freebox). La doc dev.freebox.fr/sdk/os/lan/ est figée v4 et incomplète. Pas de type 'iot', 'sensor', 'doorbell', 'lock', 'robot', 'camera' générique, 'speaker', 'weather_station', 'smoke_detector', 'scale' — pour ces cas, utiliser 'other'."),
 				mcp.Enum(
 					// Postes
 					"workstation", "laptop", "smartphone", "tablet", "printer",
@@ -92,11 +92,13 @@ func registerLANConfig(s *server.MCPServer, c writer) {
 					"nas", "networking_device",
 					// Téléphonie / sécurité IP
 					"ip_camera", "ip_phone",
-					// Freebox players
-					"freebox_player", "freebox_pop", "freebox_hd",
-					"freebox_delta", "freebox_mini", "freebox_one",
-					// Domotique (extensions v15 non documentées)
+					// Freebox players (miroir UI : Player, HD, Crystal, Mini, Delta, One, Pop)
+					"freebox_player", "freebox_hd", "freebox_crystal",
+					"freebox_mini", "freebox_delta", "freebox_one", "freebox_pop",
+					// Domotique
 					"thermostat", "light", "watch", "shutter", "outlet",
+					// Mobilité connectée
+					"car",
 					// Électroménager
 					"appliances",
 					// Fallback
