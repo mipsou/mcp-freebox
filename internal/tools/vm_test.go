@@ -8,6 +8,8 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -173,6 +175,7 @@ func TestVMCreate_OK(t *testing.T) {
 		"memory":    float64(1024),
 		"vcpus":     float64(1),
 		"disk_name": "test.qcow2",
+		"disk_dir":  "/Disque 1/VMs/",
 		"disk_type": "qcow2",
 	})
 	if result.IsError {
@@ -187,7 +190,7 @@ func TestVMCreate_APIError(t *testing.T) {
 	})
 	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
 		"name": "fail", "memory": float64(512), "vcpus": float64(1),
-		"disk_name": "fail.qcow2", "disk_type": "qcow2",
+		"disk_name": "fail.qcow2", "disk_dir": "/Disque 1/VMs/", "disk_type": "qcow2",
 	})
 	if !result.IsError {
 		t.Error("expected tool error result")
@@ -224,15 +227,33 @@ func TestVMCreate_InvalidDiskName(t *testing.T) {
 	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
 	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
 		"name": "hack", "memory": float64(512), "vcpus": float64(1),
-		"disk_name": "../etc/qemu.qcow2", "disk_type": "qcow2",
+		"disk_name": "../etc/qemu.qcow2", "disk_dir": "/Disque 1/VMs/", "disk_type": "qcow2",
 	})
 	if !result.IsError {
 		t.Error("path traversal in disk_name should return error")
 	}
 }
 
-func TestVMCreate_DiskDir_Default(t *testing.T) {
-	// Verify the handler builds /Disque 1/VMs/<name> by default (no disk_dir provided).
+func TestVMCreate_MissingDiskDir(t *testing.T) {
+	// disk_dir est requis : pas de défaut hardcodé. L'absence du paramètre doit
+	// retourner une erreur explicite plutôt que de masquer un mismatch de config
+	// (les chemins de stockage varient selon le modèle de Freebox).
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
+	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name": "no-dir", "memory": float64(512), "vcpus": float64(1),
+		"disk_name": "no-dir.qcow2", "disk_type": "qcow2",
+	})
+	if !result.IsError {
+		t.Fatal("missing disk_dir should return error")
+	}
+	got := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(got, "disk_dir") {
+		t.Errorf("error should mention disk_dir, got: %s", got)
+	}
+}
+
+func TestVMCreate_DiskDir_DisqueExterne(t *testing.T) {
+	// Caller-supplied disk_dir = /Disque 1/VMs/ (Freebox avec disque externe).
 	bodies := map[string]any{}
 	s := newVMServer(t, mockWriter{
 		mockGetter: mockGetter{"/vm/": VM{ID: 3, Name: "haos"}},
@@ -240,7 +261,7 @@ func TestVMCreate_DiskDir_Default(t *testing.T) {
 	})
 	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
 		"name": "haos", "memory": float64(2048), "vcpus": float64(2),
-		"disk_name": "haos.qcow2", "disk_type": "qcow2",
+		"disk_name": "haos.qcow2", "disk_dir": "/Disque 1/VMs/", "disk_type": "qcow2",
 	})
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
@@ -249,14 +270,14 @@ func TestVMCreate_DiskDir_Default(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected vmCreateRequest body, got %T", bodies["/vm/"])
 	}
-	want := "/Disque 1/VMs/haos.qcow2"
+	want := base64.StdEncoding.EncodeToString([]byte("/Disque 1/VMs/haos.qcow2"))
 	if creq.DiskPath != want {
-		t.Errorf("DiskPath = %q, want %q", creq.DiskPath, want)
+		t.Errorf("DiskPath = %q, want base64 %q", creq.DiskPath, want)
 	}
 }
 
-func TestVMCreate_CustomDiskDir(t *testing.T) {
-	// Verify the handler uses a caller-supplied disk_dir correctly.
+func TestVMCreate_DiskDir_StockageInterne(t *testing.T) {
+	// Caller-supplied disk_dir = /Freebox/VMs/ (Freebox avec stockage interne).
 	bodies := map[string]any{}
 	s := newVMServer(t, mockWriter{
 		mockGetter: mockGetter{"/vm/": VM{ID: 4, Name: "haos-int"}},
@@ -274,9 +295,9 @@ func TestVMCreate_CustomDiskDir(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected vmCreateRequest body, got %T", bodies["/vm/"])
 	}
-	want := "/Freebox/VMs/haos.qcow2"
+	want := base64.StdEncoding.EncodeToString([]byte("/Freebox/VMs/haos.qcow2"))
 	if creq.DiskPath != want {
-		t.Errorf("DiskPath = %q, want %q", creq.DiskPath, want)
+		t.Errorf("DiskPath = %q, want base64 %q", creq.DiskPath, want)
 	}
 }
 
@@ -339,6 +360,7 @@ func TestVMCreate_CloudInit_OK(t *testing.T) {
 		"memory":             float64(768),
 		"vcpus":              float64(2),
 		"disk_name":          "alma9.qcow2",
+		"disk_dir":           "/Disque 1/VMs/",
 		"disk_type":          "qcow2",
 		"cloudinit_userdata": userdata,
 	})
@@ -355,6 +377,7 @@ func TestVMCreate_CloudInit_TooLong(t *testing.T) {
 		"memory":             float64(512),
 		"vcpus":              float64(1),
 		"disk_name":          "big.qcow2",
+		"disk_dir":           "/Disque 1/VMs/",
 		"disk_type":          "qcow2",
 		"cloudinit_userdata": userdata,
 	})
@@ -372,6 +395,7 @@ func TestVMCreate_CDPath_OK(t *testing.T) {
 		"memory":    float64(1024),
 		"vcpus":     float64(2),
 		"disk_name": "debian.qcow2",
+		"disk_dir":  "/Disque 1/VMs/",
 		"disk_type": "qcow2",
 		"cd_path":   "/Disque 1/ISO/debian-12-arm64.iso",
 	})
@@ -387,10 +411,82 @@ func TestVMCreate_CDPath_TraversalBlocked(t *testing.T) {
 		"memory":    float64(512),
 		"vcpus":     float64(1),
 		"disk_name": "hack.qcow2",
+		"disk_dir":  "/Disque 1/VMs/",
 		"disk_type": "qcow2",
 		"cd_path":   "/../etc/passwd",
 	})
 	if !result.IsError {
 		t.Error("path traversal in cd_path should return error")
+	}
+}
+
+// ── BindUSBPorts : custom unmarshal (issue #76) ──────────────────────────────
+//
+// The Freebox API returns "" (empty string) instead of [] when no USB port is
+// bound to a VM. The custom UnmarshalJSON must accept both shapes plus null.
+
+func TestBindUSBPorts_Unmarshal_EmptyString(t *testing.T) {
+	var v VM
+	if err := json.Unmarshal([]byte(`{"bind_usb_ports": ""}`), &v); err != nil {
+		t.Fatalf("unmarshal empty string failed: %v", err)
+	}
+	if len(v.BindUSBPorts) != 0 {
+		t.Errorf("expected empty BindUSBPorts, got %v", v.BindUSBPorts)
+	}
+}
+
+func TestBindUSBPorts_Unmarshal_Null(t *testing.T) {
+	var v VM
+	if err := json.Unmarshal([]byte(`{"bind_usb_ports": null}`), &v); err != nil {
+		t.Fatalf("unmarshal null failed: %v", err)
+	}
+	if v.BindUSBPorts != nil {
+		t.Errorf("expected nil BindUSBPorts, got %v", v.BindUSBPorts)
+	}
+}
+
+func TestBindUSBPorts_Unmarshal_Array(t *testing.T) {
+	var v VM
+	if err := json.Unmarshal([]byte(`{"bind_usb_ports": ["usb-external-type-c", "usb-external-type-a"]}`), &v); err != nil {
+		t.Fatalf("unmarshal array failed: %v", err)
+	}
+	want := []string{"usb-external-type-c", "usb-external-type-a"}
+	if len(v.BindUSBPorts) != len(want) || v.BindUSBPorts[0] != want[0] || v.BindUSBPorts[1] != want[1] {
+		t.Errorf("BindUSBPorts = %v, want %v", v.BindUSBPorts, want)
+	}
+}
+
+func TestBindUSBPorts_Unmarshal_EmptyArray(t *testing.T) {
+	var v VM
+	if err := json.Unmarshal([]byte(`{"bind_usb_ports": []}`), &v); err != nil {
+		t.Fatalf("unmarshal empty array failed: %v", err)
+	}
+	if len(v.BindUSBPorts) != 0 {
+		t.Errorf("expected empty BindUSBPorts, got %v", v.BindUSBPorts)
+	}
+}
+
+func TestBindUSBPorts_Unmarshal_InvalidString(t *testing.T) {
+	var v VM
+	err := json.Unmarshal([]byte(`{"bind_usb_ports": "not-empty"}`), &v)
+	if err == nil {
+		t.Error("expected unmarshal error for non-empty string, got nil")
+	}
+}
+
+// Real-world payload captured during runtime test on Freebox firmware (PR #75
+// validation): ensures the full VM list response decodes without error when
+// bind_usb_ports comes back as an empty string.
+func TestVMList_RealPayload_BindUSBPortsEmptyString(t *testing.T) {
+	payload := `[{"id":0,"name":"test-vm","status":"stopped","memory":256,"vcpus":1,` +
+		`"disk_path":"L0Rpc3F1ZSAxL1ZNcy90ZXN0LnFjb3cy","disk_type":"qcow2",` +
+		`"os":"unknown","enable_screen":false,"cloudinit_enabled":false,` +
+		`"bind_usb_ports":""}]`
+	var vms []VM
+	if err := json.Unmarshal([]byte(payload), &vms); err != nil {
+		t.Fatalf("unmarshal real-world VM list failed: %v", err)
+	}
+	if len(vms) != 1 || vms[0].Name != "test-vm" {
+		t.Errorf("unexpected decode: %+v", vms)
 	}
 }

@@ -7,46 +7,67 @@
 package tools
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// BindUSBPorts handles the Freebox API quirk: when no USB port is bound, the
+// API returns "" (empty string) instead of [] (empty array). A custom
+// UnmarshalJSON keeps the Go-side type as a slice while tolerating both shapes.
+type BindUSBPorts []string
+
+func (b *BindUSBPorts) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) || bytes.Equal(trimmed, []byte(`""`)) {
+		*b = nil
+		return nil
+	}
+	var arr []string
+	if err := json.Unmarshal(trimmed, &arr); err != nil {
+		return err
+	}
+	*b = arr
+	return nil
+}
+
 // VM reflects one entry from GET /api/v4/vm/
 type VM struct {
-	ID                int      `json:"id"`
-	Name              string   `json:"name"`
-	Status            string   `json:"status"`
-	Memory            int      `json:"memory"`
-	Vcpus             int      `json:"vcpus"`
-	DiskPath          string   `json:"disk_path"`
-	DiskType          string   `json:"disk_type"`
-	OS                string   `json:"os"`
-	EnableScreen      bool     `json:"enable_screen"`
-	CloudinitEnabled  bool     `json:"cloudinit_enabled"`
-	CloudinitUserdata string   `json:"cloudinit_userdata,omitempty"`
-	CDPath            string   `json:"cd_path,omitempty"`
-	BindUSBPorts      []string `json:"bind_usb_ports,omitempty"`
+	ID                int          `json:"id"`
+	Name              string       `json:"name"`
+	Status            string       `json:"status"`
+	Memory            int          `json:"memory"`
+	Vcpus             int          `json:"vcpus"`
+	DiskPath          string       `json:"disk_path"`
+	DiskType          string       `json:"disk_type"`
+	OS                string       `json:"os"`
+	EnableScreen      bool         `json:"enable_screen"`
+	CloudinitEnabled  bool         `json:"cloudinit_enabled"`
+	CloudinitUserdata string       `json:"cloudinit_userdata,omitempty"`
+	CDPath            string       `json:"cd_path,omitempty"`
+	BindUSBPorts      BindUSBPorts `json:"bind_usb_ports,omitempty"`
 }
 
 // vmCreateRequest is the body sent to POST /api/v4/vm/.
 // It intentionally omits id and status (server-assigned fields): including
 // them as zero-values causes the Freebox API to return invalid_request.
 type vmCreateRequest struct {
-	Name              string   `json:"name"`
-	Memory            int      `json:"memory"`
-	Vcpus             int      `json:"vcpus"`
-	DiskPath          string   `json:"disk_path"`
-	DiskType          string   `json:"disk_type"`
-	OS                string   `json:"os"`
-	EnableScreen      bool     `json:"enable_screen"`
-	CloudinitEnabled  bool     `json:"cloudinit_enabled"`
-	CloudinitUserdata string   `json:"cloudinit_userdata,omitempty"`
-	CDPath            string   `json:"cd_path,omitempty"`
-	BindUSBPorts      []string `json:"bind_usb_ports,omitempty"`
+	Name              string       `json:"name"`
+	Memory            int          `json:"memory"`
+	Vcpus             int          `json:"vcpus"`
+	DiskPath          string       `json:"disk_path"`
+	DiskType          string       `json:"disk_type"`
+	OS                string       `json:"os"`
+	EnableScreen      bool         `json:"enable_screen"`
+	CloudinitEnabled  bool         `json:"cloudinit_enabled"`
+	CloudinitUserdata string       `json:"cloudinit_userdata,omitempty"`
+	CDPath            string       `json:"cd_path,omitempty"`
+	BindUSBPorts      BindUSBPorts `json:"bind_usb_ports,omitempty"`
 }
 
 // maxCloudinitLen is the Freebox firmware limit for cloud-init userdata (Freebox bug FS#37547).
@@ -141,7 +162,8 @@ func registerVM(s *server.MCPServer, c writer) {
 				mcp.Description("Nom du fichier disque (ex: fedora.qcow2, debian.raw) — extension .qcow2 ou .raw obligatoire"),
 				mcp.Pattern(DiskNamePattern)),
 			mcp.WithString("disk_dir",
-				mcp.Description("Répertoire du disque sur le stockage Freebox (défaut : /Disque 1/VMs/). Utiliser /Freebox/VMs/ sur les Freebox avec stockage interne.")),
+				mcp.Required(),
+				mcp.Description("Répertoire absolu du disque sur le stockage Freebox (ex: /Disque 1/VMs/, /Freebox/VMs/). Utiliser freebox_storage_partitions pour découvrir les chemins montés sur la Freebox cible. Encodé base64 en interne.")),
 			mcp.WithString("disk_type",
 				mcp.Required(),
 				mcp.Description("Type de disque : raw ou qcow2"),
@@ -168,11 +190,15 @@ func registerVM(s *server.MCPServer, c writer) {
 			if err := validateDiskName(diskName); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			// Security by design: the caller provides only the filename (disk_name) and
-			// an optional directory (disk_dir). The directory is validated with
-			// sanitizeFSPath to prevent path traversal attacks. The default directory
-			// is /Disque 1/VMs/ which matches the standard Freebox external storage layout.
-			diskDir := req.GetString("disk_dir", "/Disque 1/VMs/")
+			// Security by design: the caller provides the filename (disk_name) and
+			// the directory (disk_dir). The directory is validated with sanitizeFSPath
+			// to prevent path traversal attacks. disk_dir is required — no default —
+			// because storage paths vary across Freebox models (e.g. /Disque 1/ vs
+			// /Freebox/) and silent defaults mask configuration mismatches.
+			diskDir := req.GetString("disk_dir", "")
+			if diskDir == "" {
+				return mcp.NewToolResultError("disk_dir : paramètre requis (utiliser freebox_storage_partitions pour lister les chemins disponibles)"), nil
+			}
 			cleanDir, err := sanitizeFSPath(diskDir)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("disk_dir : %v", err)), nil
@@ -184,8 +210,9 @@ func registerVM(s *server.MCPServer, c writer) {
 
 			body := vmCreateRequest{
 				Name: name, Memory: memory, Vcpus: vcpus,
-				DiskPath: diskPath, DiskType: diskType,
-				OS: osName, EnableScreen: enableScreen,
+				DiskPath: base64.StdEncoding.EncodeToString([]byte(diskPath)),
+				DiskType: diskType,
+				OS:       osName, EnableScreen: enableScreen,
 			}
 
 			if userdata := req.GetString("cloudinit_userdata", ""); userdata != "" {
