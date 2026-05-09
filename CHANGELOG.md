@@ -9,6 +9,23 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-05-09
+
+### Ajouté — VM disk operations (#85)
+- `freebox_vm_disk_create(disk_name, disk_dir, size_gb, disk_type)` : crée un fichier disque virtuel qcow2/raw vide via `POST /api/v15/vm/disk/create`. Pré-requis avant `vm_create` quand on veut un disque "blank" sans image cloud uploadée. Validation `DiskNamePattern` + `sanitizeFSPath`.
+- `freebox_vm_disk_resize(id, size_gb, allow_shrink)` : redimensionne le disque qcow2/raw d'une VM arrêtée via `POST /api/v15/vm/disk/resize`. Récupère le `disk_path` via GET /vm/{id} (read-modify-write léger). Refuse si la VM est running ; refuse les réductions sans `allow_shrink=true` (destructif).
+- `freebox_vm_disk_task(task_id)` : poll le statut d'une tâche disque via `GET /api/v15/vm/disk/task/{id}`.
+- `freebox_vm_disk_task_delete(task_id)` : supprime une tâche terminée via `DELETE /api/v15/vm/disk/task/{id}`. Doc Freebox FS#30666 stipule que sans cet appel les tâches s'accumulent côté API.
+
+### Notes API
+- L'API VM est **undocumented officiellement** sur dev.freebox.fr/sdk/os/. Body schemas confirmés via [fbxvm-ctrl](https://github.com/nbanb/fbxvm-ctrl) puis validés runtime.
+- `VMDiskTask.error` est un **bool** (présence d'erreur), pas une string comme dans `FSTask`. L'API ne retourne **aucun message d'erreur** dans la task — diagnostiquer via la réponse synchrone du POST initial.
+- Les champs `type` et `state` du VMDiskTask sont vides au submit ; les indicateurs fiables sont `done` et `error`.
+
+### Outillage
+- `scripts/test-vm-disk-resize-runtime.mjs` : harness pour valider la chaîne complète disk_create → vm_create → disk_resize → cleanup.
+- `scripts/probe-vm-disk-task-error.mjs` : sonde la shape réelle de VMDiskTask en provoquant une erreur volontaire (audit zero-trust des hypothèses de struct).
+
 ## [0.36.0] - 2026-05-09
 
 ### Corrigé
