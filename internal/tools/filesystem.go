@@ -34,7 +34,7 @@ type FSInfo struct {
 	MimeType     string `json:"mimetype"`
 }
 
-// FSEntry reflects one entry from GET /api/v6/fs/ls/{path}
+// FSEntry reflects one entry from GET /api/v15/fs/ls/{path}
 // type : dir | file | link
 // path : base64url-encoded full path on the Freebox storage
 type FSEntry struct {
@@ -44,6 +44,15 @@ type FSEntry struct {
 	Modification int64  `json:"modification"` // Unix timestamp
 	Path         string `json:"path"`         // base64url encoded
 	MimeType     string `json:"mimetype"`
+}
+
+// FSListResult enveloppe la réponse de GET /api/v15/fs/ls/{path}.
+// Sur firmware 4.9.18.1, l'API retourne {entries:[...], parent:{...}} et non
+// pas un tableau brut — un unmarshal direct vers []FSEntry échoue avec
+// "cannot unmarshal object into Go value of type []tools.FSEntry" (#93).
+type FSListResult struct {
+	Entries []FSEntry `json:"entries"`
+	Parent  *FSEntry  `json:"parent,omitempty"`
 }
 
 // FSTask reflects the async task returned by rm/mv/cp operations.
@@ -135,11 +144,11 @@ func registerFilesystem(s *server.MCPServer, c writer) {
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			var entries []FSEntry
-			if err := c.Get(ctx, "/fs/ls/"+encodeFSPath(p), &entries); err != nil {
+			var listing FSListResult
+			if err := c.Get(ctx, "/fs/ls/"+encodeFSPath(p), &listing); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			return jsonResult(entries)
+			return jsonResult(listing.Entries)
 		},
 	)
 
@@ -313,6 +322,55 @@ func registerFilesystem(s *server.MCPServer, c writer) {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(task)
+		},
+	)
+
+	// ── Renommer un fichier (in-place) ────────────────────────────────────────
+	// /fs/rename/ diffère de /fs/mv/ : il change le nom sans changer le
+	// répertoire parent et est synchrone (retourne le nouveau path en base64,
+	// pas une FSTask). Combler le manque #94.
+	s.AddTool(
+		mcp.NewTool("freebox_fs_rename",
+			mcp.WithDescription("Renomme un fichier ou répertoire sur le stockage Freebox (in-place, sans changer de parent). Pour déplacer vers un autre dossier, utiliser freebox_fs_move."),
+			mcp.WithString("src_path",
+				mcp.Required(),
+				mcp.Description("Chemin absolu du fichier/dossier à renommer, ex: /Disque 1/VMs/old.qcow2")),
+			mcp.WithString("new_name",
+				mcp.Required(),
+				mcp.Description("Nouveau nom (basename uniquement, sans chemin), ex: new.qcow2")),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			rawSrc := req.GetString("src_path", "")
+			src, err := sanitizeFSPath(rawSrc)
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("src_path : %v", err)), nil
+			}
+			newName := req.GetString("new_name", "")
+			if newName == "" {
+				return mcp.NewToolResultError("new_name : paramètre requis"), nil
+			}
+			if strings.ContainsAny(newName, "/\\") {
+				return mcp.NewToolResultError("new_name : ne doit pas contenir de séparateur de chemin (utiliser freebox_fs_move pour déplacer)"), nil
+			}
+			if strings.Contains(newName, "..") {
+				return mcp.NewToolResultError("new_name : séquence '..' interdite"), nil
+			}
+			body := map[string]any{
+				"src": encodeFSPath(src),
+				"dst": newName,
+			}
+			var newPath string
+			if err := c.Post(ctx, "/fs/rename/", body, &newPath); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			// L'API retourne le nouveau chemin complet en base64 — on le décode
+			// pour faciliter l'usage côté caller.
+			decoded, decodeErr := base64.StdEncoding.DecodeString(newPath)
+			if decodeErr != nil {
+				// fallback : retourner le base64 brut si le décodage échoue
+				return mcp.NewToolResultText(newPath), nil
+			}
+			return mcp.NewToolResultText(string(decoded)), nil
 		},
 	)
 }

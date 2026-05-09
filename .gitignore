@@ -17,3 +17,5 @@
 /probe-vm-disk-task-error.log
 /.claude/
 /vm-cloudinit-runtime.log
+/fs-runtime.log
+/probe-fs.log
