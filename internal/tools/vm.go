@@ -32,6 +32,23 @@ type VM struct {
 	BindUSBPorts      []string `json:"bind_usb_ports,omitempty"`
 }
 
+// vmCreateRequest is the body sent to POST /api/v4/vm/.
+// It intentionally omits id and status (server-assigned fields): including
+// them as zero-values causes the Freebox API to return invalid_request.
+type vmCreateRequest struct {
+	Name              string   `json:"name"`
+	Memory            int      `json:"memory"`
+	Vcpus             int      `json:"vcpus"`
+	DiskPath          string   `json:"disk_path"`
+	DiskType          string   `json:"disk_type"`
+	OS                string   `json:"os"`
+	EnableScreen      bool     `json:"enable_screen"`
+	CloudinitEnabled  bool     `json:"cloudinit_enabled"`
+	CloudinitUserdata string   `json:"cloudinit_userdata,omitempty"`
+	CDPath            string   `json:"cd_path,omitempty"`
+	BindUSBPorts      []string `json:"bind_usb_ports,omitempty"`
+}
+
 // maxCloudinitLen is the Freebox firmware limit for cloud-init userdata (Freebox bug FS#37547).
 const maxCloudinitLen = 4096
 
@@ -165,7 +182,7 @@ func registerVM(s *server.MCPServer, c writer) {
 			osName := req.GetString("os", "unknown")
 			enableScreen := req.GetBool("enable_screen", false)
 
-			body := VM{
+			body := vmCreateRequest{
 				Name: name, Memory: memory, Vcpus: vcpus,
 				DiskPath: diskPath, DiskType: diskType,
 				OS: osName, EnableScreen: enableScreen,
