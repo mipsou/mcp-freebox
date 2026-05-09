@@ -7,6 +7,7 @@
 package tools
 
 import (
+	"encoding/json"
 	"net/url"
 	"strings"
 	"testing"
@@ -42,10 +43,14 @@ func TestEncodeFSPath(t *testing.T) {
 func TestFSList_OK(t *testing.T) {
 	p := "/Freebox/VMs"
 	encoded := encodeFSPath(p)
+	// L'API enveloppe les entries dans {entries:[...], parent:{...}} (#93).
 	s := newFSServer(t, mockGetter{
-		"/fs/ls/" + encoded: []FSEntry{
-			{Name: "Fedora.qcow2", Type: "file", Size: 5368709120, Path: encodeFSPath("/Freebox/VMs/Fedora.qcow2")},
-			{Name: "Fedora-Server-KVM-40-1.14.aarch64.qcow2", Type: "file", Size: 1073741824, Path: encodeFSPath("/Freebox/VMs/Fedora-Server-KVM-40-1.14.aarch64.qcow2")},
+		"/fs/ls/" + encoded: FSListResult{
+			Entries: []FSEntry{
+				{Name: "Fedora.qcow2", Type: "file", Size: 5368709120, Path: encodeFSPath("/Freebox/VMs/Fedora.qcow2")},
+				{Name: "Fedora-Server-KVM-40-1.14.aarch64.qcow2", Type: "file", Size: 1073741824, Path: encodeFSPath("/Freebox/VMs/Fedora-Server-KVM-40-1.14.aarch64.qcow2")},
+			},
+			Parent: &FSEntry{Name: "VMs", Type: "dir", Path: encoded},
 		},
 	})
 	req := callToolWithArgs(t, s, "freebox_fs_list", map[string]any{"path": p})
@@ -55,6 +60,28 @@ func TestFSList_OK(t *testing.T) {
 	if !strings.Contains(req.Content[0].(mcp.TextContent).Text, `"name": "Fedora.qcow2"`) {
 		t.Errorf("unexpected result: %s", req.Content[0].(mcp.TextContent).Text)
 	}
+}
+
+// TestFSList_APIWrappedShape (#93) reproduit la cause racine : l'API retourne
+// un objet {entries:[...], parent:{...}}, pas un tableau brut. Avant le fix,
+// le décodage échouait avec "cannot unmarshal object into Go value of type
+// []tools.FSEntry". Ce test garantit que le wrapper FSListResult absorbe la
+// shape réelle de l'API.
+func TestFSList_APIWrappedShape(t *testing.T) {
+	p := "/Disque 1/VMs"
+	encoded := encodeFSPath(p)
+	rawJSON := `{"entries":[{"name":"vm.qcow2","type":"file","size":1024,"path":"x","mimetype":"application/octet-stream"}],"parent":{"name":"VMs","type":"dir","path":"x"}}`
+	var listing FSListResult
+	if err := json.Unmarshal([]byte(rawJSON), &listing); err != nil {
+		t.Fatalf("FSListResult unmarshal failed on real API shape: %v", err)
+	}
+	if len(listing.Entries) != 1 || listing.Entries[0].Name != "vm.qcow2" {
+		t.Errorf("entries not decoded correctly: %+v", listing)
+	}
+	if listing.Parent == nil || listing.Parent.Name != "VMs" {
+		t.Errorf("parent not decoded correctly: %+v", listing.Parent)
+	}
+	_ = encoded
 }
 
 func TestFSList_APIError(t *testing.T) {
@@ -260,5 +287,64 @@ func TestFSInfo_APIError(t *testing.T) {
 	req := callToolWithArgs(t, s, "freebox_fs_info", map[string]any{"path": "/Freebox/Downloads"})
 	if !req.IsError {
 		t.Error("expected tool error result")
+	}
+}
+
+// ── fs_rename : /fs/rename/ rename in-place (#94) ────────────────────────────
+
+// newFSWriterServer wraps registerFilesystem with a mockWriter that captures
+// POST bodies so tests can verify the wire format.
+func newFSWriterServer(t *testing.T, mock mockWriter) *server.MCPServer {
+	t.Helper()
+	s := server.NewMCPServer("test", "0.0.0")
+	registerFilesystem(s, mock)
+	return s
+}
+
+func TestFSRename_PostBodyShape(t *testing.T) {
+	bodies := map[string]any{}
+	s := newFSWriterServer(t, mockWriter{
+		mockGetter: mockGetter{},
+		postBodies: bodies,
+	})
+	callToolWithArgs(t, s, "freebox_fs_rename", map[string]any{
+		"src_path": "/Disque 1/VMs/old.qcow2",
+		"new_name": "new.qcow2",
+	})
+	body, ok := bodies["/fs/rename/"].(map[string]any)
+	if !ok {
+		t.Fatalf("POST body type = %T, want map", bodies["/fs/rename/"])
+	}
+	wantSrc := encodeFSPath("/Disque 1/VMs/old.qcow2")
+	if body["src"] != wantSrc {
+		t.Errorf("src = %q, want %q (base64-encoded)", body["src"], wantSrc)
+	}
+	if body["dst"] != "new.qcow2" {
+		t.Errorf("dst = %q, want %q (plain text basename)", body["dst"], "new.qcow2")
+	}
+}
+
+func TestFSRename_RejectsPathInName(t *testing.T) {
+	s := newFSWriterServer(t, mockWriter{mockGetter: mockGetter{}})
+	cases := []string{"a/b", "a\\b", "../etc/passwd", "..hidden"}
+	for _, name := range cases {
+		req := callToolWithArgs(t, s, "freebox_fs_rename", map[string]any{
+			"src_path": "/Disque 1/x",
+			"new_name": name,
+		})
+		if !req.IsError {
+			t.Errorf("new_name=%q should be rejected", name)
+		}
+	}
+}
+
+func TestFSRename_RejectsTraversalInSrc(t *testing.T) {
+	s := newFSWriterServer(t, mockWriter{mockGetter: mockGetter{}})
+	req := callToolWithArgs(t, s, "freebox_fs_rename", map[string]any{
+		"src_path": "/Disque 1/../etc/passwd",
+		"new_name": "x.qcow2",
+	})
+	if !req.IsError {
+		t.Error("path traversal in src_path should be rejected")
 	}
 }
