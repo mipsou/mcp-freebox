@@ -33,6 +33,8 @@ type writer interface {
 func RegisterAll(s *server.MCPServer, c writer, d discoverer) {
 	registerDiscovery(s, d)
 	registerConnection(s, c)
+	registerConnectionLogs(s, c)
+	registerConnectionIPv6(s, c)
 	registerLAN(s, c)
 	registerDHCP(s, c)
 	registerNAT(s, c)
