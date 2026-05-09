@@ -9,6 +9,17 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-05-09
+
+### Corrigé — cloud-init silencieusement désactivé (#89)
+- `VM` struct + `vmCreateRequest` : tag JSON `cloudinit_enabled` corrigé en `enable_cloudinit` pour matcher le format réel de l'API Freebox. Avant ce fix, `freebox_vm_create` avec `cloudinit_userdata` envoyait un champ inconnu de l'API (silencieusement ignoré) ; cloud-init était toujours désactivé malgré la userdata fournie. Critique pour le PRA DNS Stack (provisioning AlmaLinux 10).
+
+### Ajouté (#90)
+- `freebox_vm_update` : nouveau paramètre `enable_cloudinit` (booléen optionnel) pour activer/désactiver cloud-init sur une VM arrêtée. Propagé via le pattern read-modify-write existant.
+
+### Outillage
+- `scripts/test-vm-cloudinit-runtime.mjs` : harness validant cycle disk_create → vm_create avec userdata → vm_list → vm_update → cleanup.
+
 ## [0.37.0] - 2026-05-09
 
 ### Ajouté — VM disk operations (#85)
