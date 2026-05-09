@@ -68,11 +68,21 @@ async function call(tool, args = {}) {
 }
 
 let vmId = null;
+const taskIds = [];
 let cleanupDone = false;
 
 async function cleanup() {
   if (cleanupDone) return;
   cleanupDone = true;
+  // Supprimer les tasks en premier (FS#30666 : required after completion)
+  for (const tid of taskIds) {
+    try {
+      await call('freebox_vm_disk_task_delete', { task_id: tid });
+      console.log(`  [cleanup] task ${tid} deleted`);
+    } catch (e) {
+      console.error(`  [cleanup] task_delete ${tid} failed: ${e.message}`);
+    }
+  }
   if (vmId !== null) {
     try {
       await call('freebox_vm_delete', { id: vmId });
@@ -95,9 +105,9 @@ async function pollTask(taskId, maxSec = 120) {
   while (Date.now() - start < maxSec * 1000) {
     const t = await call('freebox_vm_disk_task', { task_id: taskId });
     console.log(`    task ${taskId} state=${t.state} progress=${t.progress}% done=${t.done} error=${t.error}`);
-    if (t.error === true) throw new Error(`task failed: ${t.error_message ?? 'no message'}`);
+    if (t.error === true) throw new Error(`task failed: ${'no message returned by API'}`);
     if (t.done === true || t.state === 'done') return t;
-    if (t.state === 'failed') throw new Error(`task failed: ${t.error_message ?? t.error}`);
+    if (t.state === 'failed') throw new Error(`task failed: ${'task error=true (Freebox API ne retourne pas de message)'}`);
     await new Promise(r => setTimeout(r, 2000));
   }
   throw new Error(`task ${taskId} did not complete within ${maxSec}s`);
@@ -120,11 +130,12 @@ async function main() {
   });
   console.log(`    create task: id=${createTask.id} type=${createTask.type} state=${createTask.state}`);
   if (typeof createTask.id !== 'number') throw new Error(`createTask.id not a number: ${JSON.stringify(createTask)}`);
+  taskIds.push(createTask.id);
 
   console.log(`[2] poll create task ${createTask.id} until done`);
   const createFinal = await pollTask(createTask.id, 60);
   console.log(`    final: done=${createFinal.done} error=${createFinal.error}`);
-  if (createFinal.error) throw new Error(`disk_create failed: ${createFinal.error_message}`);
+  if (createFinal.error) throw new Error(`disk_create failed: error=true (no message)`);
 
   console.log('[3] verify disk file exists');
   const info = await call('freebox_fs_info', { path: `${DISK_DIR}${DISK_NAME}` });
@@ -148,11 +159,12 @@ async function main() {
     id: vmId, size_gb: TARGET_GB, allow_shrink: false,
   });
   console.log(`    resize task: id=${resizeTask.id} type=${resizeTask.type} state=${resizeTask.state}`);
+  taskIds.push(resizeTask.id);
 
   console.log(`[6] poll resize task ${resizeTask.id} until done`);
   const resizeFinal = await pollTask(resizeTask.id, 120);
   console.log(`    final: done=${resizeFinal.done} error=${resizeFinal.error}`);
-  if (resizeFinal.error) throw new Error(`disk_resize failed: ${resizeFinal.error_message}`);
+  if (resizeFinal.error) throw new Error(`disk_resize failed: error=true (no message)`);
 
   console.log('[7] verify disk size grew');
   const infoAfter = await call('freebox_fs_info', { path: `${DISK_DIR}${DISK_NAME}` });

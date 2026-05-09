@@ -74,19 +74,26 @@ type vmCreateRequest struct {
 const maxCloudinitLen = 4096
 
 // VMDiskTask reflects the async task returned by POST /api/v15/vm/disk/resize
-// et POST /api/v15/vm/disk/create. Polled via GET /api/v15/vm/disk/task/{id}.
-// Note : `error` est un bool (présence d'erreur), `error_message` est le texte
-// associé. C'est différent de FSTask où `error` est une chaîne.
+// et POST /api/v15/vm/disk/create. Polled via GET /api/v15/vm/disk/task/{id},
+// supprimée via DELETE /api/v15/vm/disk/task/{id} (cf bug tracker FS#30666).
+//
+// Shape vérifiée runtime sur firmware 4.9.18.1 :
+//   - `error` est un bool (présence d'erreur), pas une string comme dans FSTask
+//   - L'API ne retourne PAS de message d'erreur — pas de champ error_message
+//     ni error_msg. Pour diagnostiquer un échec, il faut s'appuyer sur la
+//     réponse synchrone du POST initial (qui inclut le motif), pas la task.
+//   - `type` est vide au submit puis se remplit ("create", "resize_disk") une
+//     fois l'opération démarrée
+//   - `state` est resté vide tout au long des tests — `done` et `error` sont
+//     les indicateurs fiables de complétion
 type VMDiskTask struct {
-	ID           int    `json:"id"`
-	Type         string `json:"type"`                    // create_disk | resize_disk
-	State        string `json:"state"`                   // queued | running | done | failed
-	Error        bool   `json:"error"`                   // true si erreur
-	ErrorMessage string `json:"error_message,omitempty"` // message d'erreur si error=true
-	Progress     int    `json:"progress"`                // 0..100
-	DiskPath     string `json:"disk_path,omitempty"`
-	Done         bool   `json:"done"`
-	DurationLeft int    `json:"duration_left,omitempty"`
+	ID       int    `json:"id"`
+	Type     string `json:"type"`     // "create" | "resize_disk" — vide au submit
+	State    string `json:"state"`    // observé vide en pratique
+	Error    bool   `json:"error"`    // true si erreur
+	Progress int    `json:"progress"` // 0..100
+	Done     bool   `json:"done"`
+	DiskPath string `json:"disk_path,omitempty"`
 }
 
 // vmDiskResizeRequest is the body sent to POST /api/v15/vm/disk/resize.
@@ -455,6 +462,25 @@ func registerVM(s *server.MCPServer, c writer) {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(task)
+		},
+	)
+
+	// ── Supprimer une tâche disque terminée ──────────────────────────────────
+	// Doc Freebox FS#30666 : "If the task is completed successfully, you must
+	// delete it" — sans cet appel les tasks s'accumulent côté Freebox API.
+	s.AddTool(
+		mcp.NewTool("freebox_vm_disk_task_delete",
+			mcp.WithDescription("Supprime une tâche disque VM terminée. À appeler après que freebox_vm_disk_task confirme done=true, sinon les tâches s'accumulent côté Freebox (cf bug tracker FS#30666)."),
+			mcp.WithNumber("task_id",
+				mcp.Required(),
+				mcp.Description("Identifiant de la tâche à supprimer")),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			tid := req.GetInt("task_id", 0)
+			if err := c.Delete(ctx, fmt.Sprintf("/vm/disk/task/%d", tid)); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return mcp.NewToolResultText(fmt.Sprintf("Tâche disque %d supprimée.", tid)), nil
 		},
 	)
 }
