@@ -82,9 +82,11 @@ func registerLANConfig(s *server.MCPServer, c writer) {
 			mcp.WithString("primary_name",
 				mcp.Description("Nouveau nom (optionnel)")),
 			mcp.WithString("host_type",
-				mcp.Description("Nouveau type. Set fermé sur firmware 4.9.18.1 — autres valeurs rejetées par l'API ('internal: Erreur de la modification de l'hôte'). Pas de 'iot' ni 'tv' : utiliser 'appliances' (smart-home, électroménager connecté) ou 'networking_device' (passerelles Zigbee/Hue/Trådfri)."),
+				mcp.Description("Nouveau type. Liste officielle dev.freebox.fr/sdk/os/lan/ + valeurs validées runtime sur firmware 4.9.18.1. Pas de 'iot' ni 'tv' : utiliser 'multimedia_device' pour streaming/audio/vidéo connectés, 'appliances' pour électroménager, 'networking_device' pour passerelles Zigbee/Hue/Trådfri."),
 				mcp.Enum("workstation", "laptop", "smartphone", "tablet", "printer",
-					"nas", "networking_device", "freebox_player", "freebox_pop",
+					"vg_console", "television", "nas", "ip_camera", "ip_phone",
+					"freebox_player", "freebox_pop", "freebox_hd",
+					"networking_device", "multimedia_device",
 					"appliances", "other")),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
