@@ -9,6 +9,14 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-05-09
+
+### Corrigé
+- `freebox_vm_update` : adopte le pattern **read-modify-write** pour PUT `/api/v15/vm/{id}` (#80). L'API Freebox rejette les patchs partiels avec `invalid_request` ; elle exige un body complet avec tous les champs de la VM (`mac`, `id`, `status`, `disk_path`, etc.). Le handler lit désormais l'état courant via GET, applique les overrides (`name`, `memory`, `vcpus`, `enable_screen`), et renvoie le body complet via PUT. Validé runtime sur firmware 4.9.18.1 — cycle complet create → update → verify → cleanup.
+
+### Outillage
+- `scripts/test-vm-update-runtime.mjs` : harness JSON-RPC stdio pour valider `vm_update` contre une Freebox réelle (cycle create/update/delete avec cleanup vérifié).
+
 ## [0.35.0] - 2026-05-09
 
 ### Ajouté — Tier 1 API discovery (11 nouveaux outils)
