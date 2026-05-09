@@ -82,12 +82,25 @@ func registerLANConfig(s *server.MCPServer, c writer) {
 			mcp.WithString("primary_name",
 				mcp.Description("Nouveau nom (optionnel)")),
 			mcp.WithString("host_type",
-				mcp.Description("Nouveau type. Liste officielle dev.freebox.fr/sdk/os/lan/ + valeurs validées runtime sur firmware 4.9.18.1. Pas de 'iot' ni 'tv' : utiliser 'multimedia_device' pour streaming/audio/vidéo connectés, 'appliances' pour électroménager, 'networking_device' pour passerelles Zigbee/Hue/Trådfri."),
-				mcp.Enum("workstation", "laptop", "smartphone", "tablet", "printer",
-					"vg_console", "television", "nas", "ip_camera", "ip_phone",
+				mcp.Description("Nouveau type. Set étendu validé runtime sur firmware 4.9.18.1 (24 valeurs). La doc dev.freebox.fr/sdk/os/lan/ est figée v4 et incomplète — le firmware actuel ajoute notamment les types domotiques: light (lampes Hue/Elgato), thermostat (Nest), shutter (volets), outlet (prises), watch (montres). Pas de type 'iot', 'sensor', 'doorbell', 'lock', 'robot', 'camera' générique — pour ces cas, utiliser 'other'."),
+				mcp.Enum(
+					// Postes
+					"workstation", "laptop", "smartphone", "tablet", "printer",
+					// Multimedia / TV / consoles
+					"vg_console", "television", "multimedia_device",
+					// Stockage / serveurs / réseau
+					"nas", "networking_device",
+					// Téléphonie / sécurité IP
+					"ip_camera", "ip_phone",
+					// Freebox players
 					"freebox_player", "freebox_pop", "freebox_hd",
-					"networking_device", "multimedia_device",
-					"appliances", "other")),
+					"freebox_delta", "freebox_mini", "freebox_one",
+					// Domotique (extensions v15 non documentées)
+					"thermostat", "light", "watch", "shutter", "outlet",
+					// Électroménager
+					"appliances",
+					// Fallback
+					"other")),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			id := req.GetString("id", "")

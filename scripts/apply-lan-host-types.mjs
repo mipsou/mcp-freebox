@@ -16,19 +16,22 @@ const CHANGES = [
   { match: { mac: 'E8:4E:06:32:38:9F' }, new_type: 'nas',                desc: 'Maison (Home Assistant)' },
   { match: { mac: '20:F8:3B:00:70:D9' }, new_type: 'nas',                desc: 'homeassistant (Nabu Casa)' },
   { match: { mac: 'D6:C0:B8:EC:40:43' }, new_type: 'nas',                desc: 'jeedom (serveur domotique)' },
+  { match: { mac: '96:CF:75:E5:53:A8' }, new_type: 'nas',                desc: 'domotik (controller domotique)' },
   // → networking_device : passerelles
   { match: { mac: 'C8:2E:18:52:67:78' }, new_type: 'networking_device', desc: 'SLZB-06M (Zigbee, .121)' },
   { match: { mac: 'C8:2E:18:52:67:7B' }, new_type: 'networking_device', desc: 'SLZB-06M (Zigbee, alt)' },
   { match: { mac: '68:EC:8A:00:CE:91' }, new_type: 'networking_device', desc: 'Ikia gw2 (Trådfri)' },
   { match: { mac: '00:17:88:2B:45:41' }, new_type: 'networking_device', desc: 'Hue Gw (Philips Hue Bridge)' },
-  // → appliances : électroménager / smart-home fixe
-  { match: { mac: '50:14:79:12:0C:AC' }, new_type: 'appliances',        desc: 'iRobot-Lavo (robot ménager)' },
-  { match: { mac: '18:B4:30:35:D8:33' }, new_type: 'appliances',        desc: 'Nest Protect (détecteur fumée)' },
-  { match: { mac: '70:EE:50:1D:F5:C0' }, new_type: 'appliances',        desc: 'Netatmo Weather Station' },
-  { match: { mac: '00:24:E4:1C:23:C8' }, new_type: 'appliances',        desc: 'Withings Balance' },
-  // → multimedia_device : streaming/audio/vidéo connecté
-  { match: { mac: '3C:6A:9D:15:48:A2' }, new_type: 'multimedia_device', desc: 'Elgato Key Light Air Droite (streaming)' },
-  { match: { mac: '3C:6A:9D:16:12:E1' }, new_type: 'multimedia_device', desc: 'Elgato Key Light Air Gauche (streaming)' },
+  // → light : éclairage connecté (type v15 non documenté découvert runtime)
+  { match: { mac: '3C:6A:9D:15:48:A2' }, new_type: 'light',             desc: 'Elgato Key Light Air Droite' },
+  { match: { mac: '3C:6A:9D:16:12:E1' }, new_type: 'light',             desc: 'Elgato Key Light Air Gauche' },
+  // → other : domotique sans type dédié dans le set Freebox (pas de robot,
+  //   sensor, weather_station, smoke_detector, scale ; appliances = white goods).
+  { match: { mac: '50:14:79:12:0C:AC' }, new_type: 'other',             desc: 'iRobot-Lavo (robot)' },
+  { match: { mac: '50:14:79:19:32:3C' }, new_type: 'other',             desc: 'iRobot-Aspi (aspirateur)' },
+  { match: { mac: '18:B4:30:35:D8:33' }, new_type: 'other',             desc: 'Nest Protect (détecteur fumée)' },
+  { match: { mac: '70:EE:50:1D:F5:C0' }, new_type: 'other',             desc: 'Netatmo Weather Station' },
+  { match: { mac: '00:24:E4:1C:23:C8' }, new_type: 'other',             desc: 'Withings Balance' },
 ];
 
 const BIN = resolve(process.cwd(), 'freebox-mcp.exe');
