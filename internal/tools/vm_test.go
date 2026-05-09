@@ -24,9 +24,13 @@ type mockWriter struct {
 	putErrs      map[string]error
 	deleteErrs   map[string]error
 	postFormVals map[string]url.Values // captures PostForm calls for assertion
+	postBodies   map[string]any        // captures Post body for assertion
 }
 
-func (m mockWriter) Post(_ context.Context, path string, _, _ any) error {
+func (m mockWriter) Post(_ context.Context, path string, body, _ any) error {
+	if m.postBodies != nil {
+		m.postBodies[path] = body
+	}
 	if err, ok := m.postErrs[path]; ok {
 		return err
 	}
@@ -227,11 +231,13 @@ func TestVMCreate_InvalidDiskName(t *testing.T) {
 	}
 }
 
-func TestVMCreate_DiskPathConstructed(t *testing.T) {
-	// Verify the handler builds /Freebox/VMs/<name> and not a user-supplied path
-	s := newVMServer(t, mockWriter{mockGetter: mockGetter{
-		"/vm/": VM{ID: 3, Name: "haos", DiskPath: "/Freebox/VMs/haos.qcow2"},
-	}})
+func TestVMCreate_DiskDir_Default(t *testing.T) {
+	// Verify the handler builds /Disque 1/VMs/<name> by default (no disk_dir provided).
+	bodies := map[string]any{}
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{"/vm/": VM{ID: 3, Name: "haos"}},
+		postBodies: bodies,
+	})
 	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
 		"name": "haos", "memory": float64(2048), "vcpus": float64(2),
 		"disk_name": "haos.qcow2", "disk_type": "qcow2",
@@ -239,8 +245,52 @@ func TestVMCreate_DiskPathConstructed(t *testing.T) {
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
 	}
-	// Result is the mock response; the important thing is no error — the actual
-	// path sent to the API is /Freebox/VMs/haos.qcow2 (verified by design)
+	vm, ok := bodies["/vm/"].(VM)
+	if !ok {
+		t.Fatalf("expected VM body, got %T", bodies["/vm/"])
+	}
+	want := "/Disque 1/VMs/haos.qcow2"
+	if vm.DiskPath != want {
+		t.Errorf("DiskPath = %q, want %q", vm.DiskPath, want)
+	}
+}
+
+func TestVMCreate_CustomDiskDir(t *testing.T) {
+	// Verify the handler uses a caller-supplied disk_dir correctly.
+	bodies := map[string]any{}
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{"/vm/": VM{ID: 4, Name: "haos-int"}},
+		postBodies: bodies,
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name": "haos-int", "memory": float64(2048), "vcpus": float64(2),
+		"disk_name": "haos.qcow2", "disk_type": "qcow2",
+		"disk_dir": "/Freebox/VMs/",
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	vm, ok := bodies["/vm/"].(VM)
+	if !ok {
+		t.Fatalf("expected VM body, got %T", bodies["/vm/"])
+	}
+	want := "/Freebox/VMs/haos.qcow2"
+	if vm.DiskPath != want {
+		t.Errorf("DiskPath = %q, want %q", vm.DiskPath, want)
+	}
+}
+
+func TestVMCreate_DiskDir_TraversalBlocked(t *testing.T) {
+	// Verify path traversal in disk_dir is rejected.
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
+	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name": "hack", "memory": float64(512), "vcpus": float64(1),
+		"disk_name": "hack.qcow2", "disk_type": "qcow2",
+		"disk_dir": "/../etc/",
+	})
+	if !result.IsError {
+		t.Error("path traversal in disk_dir should return error")
+	}
 }
 
 func TestVMUpdate_OK(t *testing.T) {

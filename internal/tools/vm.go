@@ -107,7 +107,7 @@ func registerVM(s *server.MCPServer, c writer) {
 	// ── Créer ────────────────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_vm_create",
-			mcp.WithDescription("Crée une nouvelle machine virtuelle sur la Freebox. Le disque doit se trouver dans /Freebox/VMs/."),
+			mcp.WithDescription("Crée une nouvelle machine virtuelle sur la Freebox."),
 			mcp.WithString("name",
 				mcp.Required(),
 				mcp.Description("Nom de la VM")),
@@ -121,8 +121,10 @@ func registerVM(s *server.MCPServer, c writer) {
 				mcp.Min(1), mcp.Max(8)),
 			mcp.WithString("disk_name",
 				mcp.Required(),
-				mcp.Description("Nom du fichier disque sous /Freebox/VMs/ (ex: fedora.qcow2, debian.raw) — extension .qcow2 ou .raw obligatoire"),
+				mcp.Description("Nom du fichier disque (ex: fedora.qcow2, debian.raw) — extension .qcow2 ou .raw obligatoire"),
 				mcp.Pattern(DiskNamePattern)),
+			mcp.WithString("disk_dir",
+				mcp.Description("Répertoire du disque sur le stockage Freebox (défaut : /Disque 1/VMs/). Utiliser /Freebox/VMs/ sur les Freebox avec stockage interne.")),
 			mcp.WithString("disk_type",
 				mcp.Required(),
 				mcp.Description("Type de disque : raw ou qcow2"),
@@ -149,9 +151,16 @@ func registerVM(s *server.MCPServer, c writer) {
 			if err := validateDiskName(diskName); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			// Security by design: path prefix is always /Freebox/VMs/ — the caller
-			// provides only the filename, never the directory.
-			diskPath := "/Freebox/VMs/" + diskName
+			// Security by design: the caller provides only the filename (disk_name) and
+			// an optional directory (disk_dir). The directory is validated with
+			// sanitizeFSPath to prevent path traversal attacks. The default directory
+			// is /Disque 1/VMs/ which matches the standard Freebox external storage layout.
+			diskDir := req.GetString("disk_dir", "/Disque 1/VMs/")
+			cleanDir, err := sanitizeFSPath(diskDir)
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("disk_dir : %v", err)), nil
+			}
+			diskPath := cleanDir + "/" + diskName
 			diskType := req.GetString("disk_type", "")
 			osName := req.GetString("os", "unknown")
 			enableScreen := req.GetBool("enable_screen", false)
