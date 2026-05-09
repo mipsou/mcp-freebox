@@ -44,6 +44,7 @@ func RegisterAll(s *server.MCPServer, c writer, d discoverer) {
 	registerStorage(s, c)
 	registerFilesystem(s, c)
 	registerVM(s, c)
+	registerVMInfo(s, c)
 	registerSystem(s, c)
 	registerSwitch(s, c)
 	registerFirewall(s, c)
