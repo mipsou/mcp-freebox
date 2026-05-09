@@ -9,6 +9,35 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-05-09
+
+### Ajouté — Tier 1 API discovery (11 nouveaux outils)
+
+Découverte et implémentation systématique des endpoints Freebox utilisés en pratique mais non couverts par le MCP. Validation runtime 11/11 sur firmware **4.9.18.1**.
+
+#### Outils ajoutés
+- `freebox_connection_logs` — `GET /connection/logs/` : transitions état ligne (up/down)
+- `freebox_connection_ipv6_config` — `GET /connection/ipv6/config/` : configuration IPv6 (delegation, prefixes)
+- `freebox_lan_interfaces` — `GET /lan/browser/interfaces/` : interfaces LAN browsables avec compte d'hôtes
+- `freebox_wifi_mac_filter` — `GET /wifi/mac_filter/` : règles de filtrage MAC WiFi
+- `freebox_wifi_planning` — `GET /wifi/planning/` : grille horaire d'activation WiFi
+- `freebox_storage_raid` — `GET /storage/raid/` : état des arrays RAID
+- `freebox_fs_info` — `GET /fs/info/` : métadonnées d'un fichier/dossier (mimetype, taille, droits)
+- `freebox_vm_info` — `GET /vm/info/` : capacités VM (cpus, mémoire, distros supportées)
+- `freebox_vm_distros` — `GET /vm/distros/` : catalogue distros disponibles pour création VM
+- `freebox_switch_port_config` — `GET /switch/port/{id}/` : config d'un port switch (duplex, speed, mode)
+
+#### Outil enrichi
+- `freebox_switch_port_stats` — schéma `SwitchStats` étendu de 5 → 30 champs pour refléter le firmware 4.9.18.1 (rx_good_bytes/packets, tx_collisions, errors, broadcast/multicast/unicast counters, etc.)
+
+#### Outillage de découverte API
+- `scripts/probe-endpoints.mjs` : sonde HTTP pour cartographier `/api/v15/*`
+- `scripts/sniff-freebox-endpoints.mjs` : capture passive de la session Freebox OS
+- `scripts/fetch-samples.mjs` : récupère payloads exemples
+- `scripts/test-tier1-runtime.mjs` : harness JSON-RPC stdio contre Freebox réelle
+
+## [0.34.0] - 2026-05-09
+
 ### ⚠️ Breaking change
 - `freebox_vm_create` : le paramètre `disk_dir` est désormais **obligatoire** (plus de défaut `/Disque 1/VMs/` hardcodé). Les chemins de stockage varient selon le modèle de Freebox (`/Disque 1/...` avec disque externe, `/Freebox/...` avec stockage interne) ; un défaut silencieux masquait les mismatches de configuration. Utiliser `freebox_storage_partitions` pour découvrir les chemins disponibles. Tout client qui s'appuyait sur le défaut implicite doit désormais passer `disk_dir` explicitement.
 
