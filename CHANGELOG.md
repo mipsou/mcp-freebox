@@ -9,6 +9,11 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-05-09
+
+### Corrigé
+- `freebox_lan_host_update` : l'enum `host_type` était limité à 11 valeurs (sondage runtime initial avec liste de candidats incomplète). La doc officielle [dev.freebox.fr/sdk/os/lan/](https://dev.freebox.fr/sdk/os/lan/) liste 15 valeurs, dont 6 que j'avais ratées : `vg_console`, `television`, `ip_camera`, `ip_phone`, `freebox_hd`, `multimedia_device`. Re-sondage runtime confirme les 15 + `freebox_pop` + `appliances` = 16 acceptés par l'API + `other` = **17 valeurs au total**. Description du paramètre mise à jour avec catégorisation pratique (multimedia_device pour streaming/audio/vidéo, appliances pour électroménager, networking_device pour passerelles).
+
 ## [0.40.0] - 2026-05-09
 
 ### Corrigé — bug bloquant freebox_lan_hosts
