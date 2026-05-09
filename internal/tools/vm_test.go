@@ -373,6 +373,71 @@ func TestVMUpdate_ReadModifyWrite_PreservesUnchanged(t *testing.T) {
 	}
 }
 
+// TestVMUpdate_EnableCloudinitToggle (#90) garantit que le paramètre
+// enable_cloudinit ajouté à freebox_vm_update est bien propagé dans le PUT
+// body et utilise le bon nom de champ JSON (enable_cloudinit, pas cloudinit_enabled).
+func TestVMUpdate_EnableCloudinitToggle(t *testing.T) {
+	bodies := map[string]any{}
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{"/vm/0": VM{ID: 0, Name: "vm", CloudinitEnabled: false}},
+		putBodies:  bodies,
+	})
+	callToolWithArgs(t, s, "freebox_vm_update", map[string]any{
+		"id": float64(0), "enable_cloudinit": true,
+	})
+	body := bodies["/vm/0"].(VM)
+	if !body.CloudinitEnabled {
+		t.Errorf("CloudinitEnabled = false, want true")
+	}
+	raw, _ := json.Marshal(body)
+	if !strings.Contains(string(raw), `"enable_cloudinit":true`) {
+		t.Errorf("PUT body missing enable_cloudinit:true, got: %s", string(raw))
+	}
+	if strings.Contains(string(raw), `"cloudinit_enabled"`) {
+		t.Errorf("PUT body should NOT contain old tag cloudinit_enabled, got: %s", string(raw))
+	}
+}
+
+// TestVMCreate_CloudinitJSONTagFix (#89) : le body POST /vm/ doit utiliser
+// le tag enable_cloudinit, pas cloudinit_enabled (l'API rejette/ignore le
+// tag erroné, désactivant silencieusement cloud-init).
+func TestVMCreate_CloudinitJSONTagFix(t *testing.T) {
+	bodies := map[string]any{}
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{"/vm/": VM{ID: 1}},
+		postBodies: bodies,
+	})
+	callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name": "ci-test", "memory": float64(512), "vcpus": float64(1),
+		"disk_name": "ci.qcow2", "disk_dir": "/Disque 1/VMs/", "disk_type": "qcow2",
+		"cloudinit_userdata": "#cloud-config\nhostname: test\n",
+	})
+	body := bodies["/vm/"].(vmCreateRequest)
+	raw, _ := json.Marshal(body)
+	if !strings.Contains(string(raw), `"enable_cloudinit":true`) {
+		t.Errorf("POST body missing enable_cloudinit:true, got: %s", string(raw))
+	}
+	if strings.Contains(string(raw), `"cloudinit_enabled"`) {
+		t.Errorf("POST body should NOT contain old tag cloudinit_enabled, got: %s", string(raw))
+	}
+}
+
+// TestVM_UnmarshalEnableCloudinit (#89) : la structure VM doit décoder un
+// payload contenant enable_cloudinit (forme réelle de l'API), pas seulement
+// cloudinit_enabled (forme erronée précédemment dans le code).
+func TestVM_UnmarshalEnableCloudinit(t *testing.T) {
+	payload := `{"id":0,"name":"x","status":"stopped","memory":256,"vcpus":1,
+		"disk_path":"","disk_type":"qcow2","os":"debian","enable_screen":false,
+		"enable_cloudinit":true,"bind_usb_ports":""}`
+	var vm VM
+	if err := json.Unmarshal([]byte(payload), &vm); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if !vm.CloudinitEnabled {
+		t.Errorf("CloudinitEnabled = false, want true (enable_cloudinit:true in payload)")
+	}
+}
+
 // TestVMUpdate_EnableScreenToggle vérifie que enable_screen passe correctement
 // de false à true dans le PUT body après modification.
 func TestVMUpdate_EnableScreenToggle(t *testing.T) {

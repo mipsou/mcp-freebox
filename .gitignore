@@ -16,3 +16,4 @@
 /vm-disk-resize-runtime.log
 /probe-vm-disk-task-error.log
 /.claude/
+/vm-cloudinit-runtime.log
