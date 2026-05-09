@@ -8,13 +8,16 @@ const TOKEN = process.env.FREEBOX_APP_TOKEN;
 if (!TOKEN) { console.error('no token'); process.exit(1); }
 
 const TARGET_VENDOR = 'Nest Labs Inc.';
+// Liste officielle dev.freebox.fr/sdk/os/lan/ + valeurs déjà sondées + autres
+// candidats raisonnables pour vérifier l'extensibilité du set.
 const CANDIDATES = [
-  'workstation', 'laptop', 'smartphone', 'tablet',
-  'printer', 'tv', 'nas', 'networking_device',
-  'freebox_player', 'freebox_pop', 'freebox_server',
-  'appliances', 'iot', 'other',
-  'fbx_iot', 'iot_device', 'smart_device',
-  'router', 'switch', 'access_point',
+  // Liste officielle doc (15 valeurs)
+  'workstation', 'laptop', 'smartphone', 'tablet', 'printer',
+  'vg_console', 'television', 'nas', 'ip_camera', 'ip_phone',
+  'freebox_player', 'freebox_hd', 'networking_device',
+  'multimedia_device', 'other',
+  // Acceptées via probing antérieur mais hors doc officielle
+  'freebox_pop', 'appliances',
 ];
 
 const BIN = resolve(process.cwd(), 'freebox-mcp.exe');
