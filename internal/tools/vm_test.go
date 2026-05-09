@@ -174,6 +174,7 @@ func TestVMCreate_OK(t *testing.T) {
 		"memory":    float64(1024),
 		"vcpus":     float64(1),
 		"disk_name": "test.qcow2",
+		"disk_dir":  "/Disque 1/VMs/",
 		"disk_type": "qcow2",
 	})
 	if result.IsError {
@@ -188,7 +189,7 @@ func TestVMCreate_APIError(t *testing.T) {
 	})
 	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
 		"name": "fail", "memory": float64(512), "vcpus": float64(1),
-		"disk_name": "fail.qcow2", "disk_type": "qcow2",
+		"disk_name": "fail.qcow2", "disk_dir": "/Disque 1/VMs/", "disk_type": "qcow2",
 	})
 	if !result.IsError {
 		t.Error("expected tool error result")
@@ -225,15 +226,33 @@ func TestVMCreate_InvalidDiskName(t *testing.T) {
 	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
 	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
 		"name": "hack", "memory": float64(512), "vcpus": float64(1),
-		"disk_name": "../etc/qemu.qcow2", "disk_type": "qcow2",
+		"disk_name": "../etc/qemu.qcow2", "disk_dir": "/Disque 1/VMs/", "disk_type": "qcow2",
 	})
 	if !result.IsError {
 		t.Error("path traversal in disk_name should return error")
 	}
 }
 
-func TestVMCreate_DiskDir_Default(t *testing.T) {
-	// Verify the handler builds /Disque 1/VMs/<name> by default (no disk_dir provided).
+func TestVMCreate_MissingDiskDir(t *testing.T) {
+	// disk_dir est requis : pas de défaut hardcodé. L'absence du paramètre doit
+	// retourner une erreur explicite plutôt que de masquer un mismatch de config
+	// (les chemins de stockage varient selon le modèle de Freebox).
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
+	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
+		"name": "no-dir", "memory": float64(512), "vcpus": float64(1),
+		"disk_name": "no-dir.qcow2", "disk_type": "qcow2",
+	})
+	if !result.IsError {
+		t.Fatal("missing disk_dir should return error")
+	}
+	got := result.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(got, "disk_dir") {
+		t.Errorf("error should mention disk_dir, got: %s", got)
+	}
+}
+
+func TestVMCreate_DiskDir_DisqueExterne(t *testing.T) {
+	// Caller-supplied disk_dir = /Disque 1/VMs/ (Freebox avec disque externe).
 	bodies := map[string]any{}
 	s := newVMServer(t, mockWriter{
 		mockGetter: mockGetter{"/vm/": VM{ID: 3, Name: "haos"}},
@@ -241,7 +260,7 @@ func TestVMCreate_DiskDir_Default(t *testing.T) {
 	})
 	result := callToolWithArgs(t, s, "freebox_vm_create", map[string]any{
 		"name": "haos", "memory": float64(2048), "vcpus": float64(2),
-		"disk_name": "haos.qcow2", "disk_type": "qcow2",
+		"disk_name": "haos.qcow2", "disk_dir": "/Disque 1/VMs/", "disk_type": "qcow2",
 	})
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
@@ -256,8 +275,8 @@ func TestVMCreate_DiskDir_Default(t *testing.T) {
 	}
 }
 
-func TestVMCreate_CustomDiskDir(t *testing.T) {
-	// Verify the handler uses a caller-supplied disk_dir correctly.
+func TestVMCreate_DiskDir_StockageInterne(t *testing.T) {
+	// Caller-supplied disk_dir = /Freebox/VMs/ (Freebox avec stockage interne).
 	bodies := map[string]any{}
 	s := newVMServer(t, mockWriter{
 		mockGetter: mockGetter{"/vm/": VM{ID: 4, Name: "haos-int"}},
@@ -340,6 +359,7 @@ func TestVMCreate_CloudInit_OK(t *testing.T) {
 		"memory":             float64(768),
 		"vcpus":              float64(2),
 		"disk_name":          "alma9.qcow2",
+		"disk_dir":           "/Disque 1/VMs/",
 		"disk_type":          "qcow2",
 		"cloudinit_userdata": userdata,
 	})
@@ -356,6 +376,7 @@ func TestVMCreate_CloudInit_TooLong(t *testing.T) {
 		"memory":             float64(512),
 		"vcpus":              float64(1),
 		"disk_name":          "big.qcow2",
+		"disk_dir":           "/Disque 1/VMs/",
 		"disk_type":          "qcow2",
 		"cloudinit_userdata": userdata,
 	})
@@ -373,6 +394,7 @@ func TestVMCreate_CDPath_OK(t *testing.T) {
 		"memory":    float64(1024),
 		"vcpus":     float64(2),
 		"disk_name": "debian.qcow2",
+		"disk_dir":  "/Disque 1/VMs/",
 		"disk_type": "qcow2",
 		"cd_path":   "/Disque 1/ISO/debian-12-arm64.iso",
 	})
@@ -388,6 +410,7 @@ func TestVMCreate_CDPath_TraversalBlocked(t *testing.T) {
 		"memory":    float64(512),
 		"vcpus":     float64(1),
 		"disk_name": "hack.qcow2",
+		"disk_dir":  "/Disque 1/VMs/",
 		"disk_type": "qcow2",
 		"cd_path":   "/../etc/passwd",
 	})

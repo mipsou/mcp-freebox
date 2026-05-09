@@ -9,6 +9,9 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+### ⚠️ Breaking change
+- `freebox_vm_create` : le paramètre `disk_dir` est désormais **obligatoire** (plus de défaut `/Disque 1/VMs/` hardcodé). Les chemins de stockage varient selon le modèle de Freebox (`/Disque 1/...` avec disque externe, `/Freebox/...` avec stockage interne) ; un défaut silencieux masquait les mismatches de configuration. Utiliser `freebox_storage_partitions` pour découvrir les chemins disponibles. Tout client qui s'appuyait sur le défaut implicite doit désormais passer `disk_dir` explicitement.
+
 ### Corrigé
 - `freebox_vm_create` : `disk_path` désormais encodé en base64 standard avant envoi à l'API (cohérence avec `cd_path`, `fs/`, `download_dir`). Corrige `invalid_request` persistant sur création VM (#73).
 
