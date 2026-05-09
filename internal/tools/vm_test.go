@@ -8,6 +8,7 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strings"
@@ -249,9 +250,9 @@ func TestVMCreate_DiskDir_Default(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected vmCreateRequest body, got %T", bodies["/vm/"])
 	}
-	want := "/Disque 1/VMs/haos.qcow2"
+	want := base64.StdEncoding.EncodeToString([]byte("/Disque 1/VMs/haos.qcow2"))
 	if creq.DiskPath != want {
-		t.Errorf("DiskPath = %q, want %q", creq.DiskPath, want)
+		t.Errorf("DiskPath = %q, want base64 %q", creq.DiskPath, want)
 	}
 }
 
@@ -274,9 +275,9 @@ func TestVMCreate_CustomDiskDir(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected vmCreateRequest body, got %T", bodies["/vm/"])
 	}
-	want := "/Freebox/VMs/haos.qcow2"
+	want := base64.StdEncoding.EncodeToString([]byte("/Freebox/VMs/haos.qcow2"))
 	if creq.DiskPath != want {
-		t.Errorf("DiskPath = %q, want %q", creq.DiskPath, want)
+		t.Errorf("DiskPath = %q, want base64 %q", creq.DiskPath, want)
 	}
 }
 

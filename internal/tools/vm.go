@@ -141,7 +141,7 @@ func registerVM(s *server.MCPServer, c writer) {
 				mcp.Description("Nom du fichier disque (ex: fedora.qcow2, debian.raw) — extension .qcow2 ou .raw obligatoire"),
 				mcp.Pattern(DiskNamePattern)),
 			mcp.WithString("disk_dir",
-				mcp.Description("Répertoire du disque sur le stockage Freebox (défaut : /Disque 1/VMs/). Utiliser /Freebox/VMs/ sur les Freebox avec stockage interne.")),
+				mcp.Description("Répertoire du disque sur le stockage Freebox (défaut : /Disque 1/VMs/). Utiliser /Freebox/VMs/ sur les Freebox avec stockage interne. Encodé base64 en interne.")),
 			mcp.WithString("disk_type",
 				mcp.Required(),
 				mcp.Description("Type de disque : raw ou qcow2"),
@@ -184,8 +184,9 @@ func registerVM(s *server.MCPServer, c writer) {
 
 			body := vmCreateRequest{
 				Name: name, Memory: memory, Vcpus: vcpus,
-				DiskPath: diskPath, DiskType: diskType,
-				OS: osName, EnableScreen: enableScreen,
+				DiskPath: base64.StdEncoding.EncodeToString([]byte(diskPath)),
+				DiskType: diskType,
+				OS:       osName, EnableScreen: enableScreen,
 			}
 
 			if userdata := req.GetString("cloudinit_userdata", ""); userdata != "" {
