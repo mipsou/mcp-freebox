@@ -162,7 +162,8 @@ func registerVM(s *server.MCPServer, c writer) {
 				mcp.Description("Nom du fichier disque (ex: fedora.qcow2, debian.raw) — extension .qcow2 ou .raw obligatoire"),
 				mcp.Pattern(DiskNamePattern)),
 			mcp.WithString("disk_dir",
-				mcp.Description("Répertoire du disque sur le stockage Freebox (défaut : /Disque 1/VMs/). Utiliser /Freebox/VMs/ sur les Freebox avec stockage interne. Encodé base64 en interne.")),
+				mcp.Required(),
+				mcp.Description("Répertoire absolu du disque sur le stockage Freebox (ex: /Disque 1/VMs/, /Freebox/VMs/). Utiliser freebox_storage_partitions pour découvrir les chemins montés sur la Freebox cible. Encodé base64 en interne.")),
 			mcp.WithString("disk_type",
 				mcp.Required(),
 				mcp.Description("Type de disque : raw ou qcow2"),
@@ -189,11 +190,15 @@ func registerVM(s *server.MCPServer, c writer) {
 			if err := validateDiskName(diskName); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			// Security by design: the caller provides only the filename (disk_name) and
-			// an optional directory (disk_dir). The directory is validated with
-			// sanitizeFSPath to prevent path traversal attacks. The default directory
-			// is /Disque 1/VMs/ which matches the standard Freebox external storage layout.
-			diskDir := req.GetString("disk_dir", "/Disque 1/VMs/")
+			// Security by design: the caller provides the filename (disk_name) and
+			// the directory (disk_dir). The directory is validated with sanitizeFSPath
+			// to prevent path traversal attacks. disk_dir is required — no default —
+			// because storage paths vary across Freebox models (e.g. /Disque 1/ vs
+			// /Freebox/) and silent defaults mask configuration mismatches.
+			diskDir := req.GetString("disk_dir", "")
+			if diskDir == "" {
+				return mcp.NewToolResultError("disk_dir : paramètre requis (utiliser freebox_storage_partitions pour lister les chemins disponibles)"), nil
+			}
 			cleanDir, err := sanitizeFSPath(diskDir)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("disk_dir : %v", err)), nil
