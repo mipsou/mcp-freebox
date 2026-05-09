@@ -75,3 +75,40 @@ func TestStoragePartitions_APIError(t *testing.T) {
 		t.Error("expected tool error result")
 	}
 }
+
+func TestStorageRAID_OK(t *testing.T) {
+	s := newStorageServer(t, mockGetter{
+		"/storage/raid/": []StorageRAID{
+			{ID: 1, Name: "raid0", State: "ok", Level: "raid1"},
+		},
+	})
+	result := callTool(t, s, "freebox_storage_raid")
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, `"level": "raid1"`) {
+		t.Errorf("unexpected result: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+}
+
+func TestStorageRAID_NullEmptyArray(t *testing.T) {
+	// Quand la Freebox n'a aucun RAID configure, /storage/raid/ retourne null
+	// dans le wrapper (success=true, result=null). Le mock simule ca via
+	// une slice vide ; le tool doit retourner "[]" pas "null".
+	s := newStorageServer(t, mockGetter{"/storage/raid/": []StorageRAID{}})
+	result := callTool(t, s, "freebox_storage_raid")
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	if result.Content[0].(mcp.TextContent).Text != "[]" {
+		t.Errorf("expected empty array, got: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+}
+
+func TestStorageRAID_APIError(t *testing.T) {
+	s := newStorageServer(t, mockGetter{"/storage/disk/": []StorageDisk{}})
+	result := callTool(t, s, "freebox_storage_raid")
+	if !result.IsError {
+		t.Error("expected tool error result")
+	}
+}

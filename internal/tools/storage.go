@@ -70,4 +70,29 @@ func registerStorage(s *server.MCPServer, c getter) {
 			return jsonResult(parts)
 		},
 	)
+
+	s.AddTool(
+		mcp.NewTool("freebox_storage_raid",
+			mcp.WithDescription("État des grappes RAID configurées sur la Freebox. Retourne une liste vide / null si aucun RAID configuré."),
+		),
+		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			var raids []StorageRAID
+			if err := c.Get(ctx, "/storage/raid/", &raids); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			if raids == nil {
+				raids = []StorageRAID{}
+			}
+			return jsonResult(raids)
+		},
+	)
+}
+
+// StorageRAID reflects une grappe RAID. Schéma minimal — l'API renvoie null
+// quand aucun RAID n'est configuré.
+type StorageRAID struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	State string `json:"state"`
+	Level string `json:"level"`
 }

@@ -7,6 +7,7 @@
 package tools
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 
@@ -215,5 +216,49 @@ func TestFSList_TraversalBlocked(t *testing.T) {
 	req := callToolWithArgs(t, s, "freebox_fs_list", map[string]any{"path": "/../etc/passwd"})
 	if !req.IsError {
 		t.Error("path traversal should return error")
+	}
+}
+
+// ── fs_info : path passe en query-string URL-encode ───────────────────────────
+
+func TestFSInfo_OK(t *testing.T) {
+	p := "/Disque dur"
+	encoded := encodeFSPath(p)
+	mockKey := "/fs/info/?path=" + url.QueryEscape(encoded)
+	s := newFSServer(t, mockGetter{
+		mockKey: FSInfo{
+			Name:     "Disque dur",
+			Path:     encoded,
+			Type:     "dir",
+			Size:     60,
+			MimeType: "inode/directory",
+		},
+	})
+	req := callToolWithArgs(t, s, "freebox_fs_info", map[string]any{"path": p})
+	if req.IsError {
+		t.Fatalf("tool returned error: %v", req.Content)
+	}
+	out := req.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(out, `"name": "Disque dur"`) {
+		t.Errorf("missing name: %s", out)
+	}
+	if !strings.Contains(out, `"mimetype": "inode/directory"`) {
+		t.Errorf("missing mimetype: %s", out)
+	}
+}
+
+func TestFSInfo_TraversalBlocked(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_info", map[string]any{"path": "/Freebox/../../etc"})
+	if !req.IsError {
+		t.Error("path traversal should return error")
+	}
+}
+
+func TestFSInfo_APIError(t *testing.T) {
+	s := newFSServer(t, mockGetter{})
+	req := callToolWithArgs(t, s, "freebox_fs_info", map[string]any{"path": "/Freebox/Downloads"})
+	if !req.IsError {
+		t.Error("expected tool error result")
 	}
 }
