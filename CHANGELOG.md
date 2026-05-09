@@ -11,6 +11,7 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ### Corrigé
 - `freebox_vm_create` : `disk_path` désormais encodé en base64 standard avant envoi à l'API (cohérence avec `cd_path`, `fs/`, `download_dir`). Corrige `invalid_request` persistant sur création VM (#73).
+- `freebox_vm_list` / `freebox_vm_create` : custom `UnmarshalJSON` sur `BindUSBPorts` pour tolérer le quirk de l'API Freebox qui renvoie `""` (string vide) au lieu de `[]` quand aucun port USB n'est lié. Débloque l'usage de `freebox_vm_list` dès qu'au moins une VM existe (#76).
 
 ---
 

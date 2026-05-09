@@ -9,6 +9,7 @@ package tools
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -393,5 +394,76 @@ func TestVMCreate_CDPath_TraversalBlocked(t *testing.T) {
 	})
 	if !result.IsError {
 		t.Error("path traversal in cd_path should return error")
+	}
+}
+
+// ── BindUSBPorts : custom unmarshal (issue #76) ──────────────────────────────
+//
+// The Freebox API returns "" (empty string) instead of [] when no USB port is
+// bound to a VM. The custom UnmarshalJSON must accept both shapes plus null.
+
+func TestBindUSBPorts_Unmarshal_EmptyString(t *testing.T) {
+	var v VM
+	if err := json.Unmarshal([]byte(`{"bind_usb_ports": ""}`), &v); err != nil {
+		t.Fatalf("unmarshal empty string failed: %v", err)
+	}
+	if len(v.BindUSBPorts) != 0 {
+		t.Errorf("expected empty BindUSBPorts, got %v", v.BindUSBPorts)
+	}
+}
+
+func TestBindUSBPorts_Unmarshal_Null(t *testing.T) {
+	var v VM
+	if err := json.Unmarshal([]byte(`{"bind_usb_ports": null}`), &v); err != nil {
+		t.Fatalf("unmarshal null failed: %v", err)
+	}
+	if v.BindUSBPorts != nil {
+		t.Errorf("expected nil BindUSBPorts, got %v", v.BindUSBPorts)
+	}
+}
+
+func TestBindUSBPorts_Unmarshal_Array(t *testing.T) {
+	var v VM
+	if err := json.Unmarshal([]byte(`{"bind_usb_ports": ["usb-external-type-c", "usb-external-type-a"]}`), &v); err != nil {
+		t.Fatalf("unmarshal array failed: %v", err)
+	}
+	want := []string{"usb-external-type-c", "usb-external-type-a"}
+	if len(v.BindUSBPorts) != len(want) || v.BindUSBPorts[0] != want[0] || v.BindUSBPorts[1] != want[1] {
+		t.Errorf("BindUSBPorts = %v, want %v", v.BindUSBPorts, want)
+	}
+}
+
+func TestBindUSBPorts_Unmarshal_EmptyArray(t *testing.T) {
+	var v VM
+	if err := json.Unmarshal([]byte(`{"bind_usb_ports": []}`), &v); err != nil {
+		t.Fatalf("unmarshal empty array failed: %v", err)
+	}
+	if len(v.BindUSBPorts) != 0 {
+		t.Errorf("expected empty BindUSBPorts, got %v", v.BindUSBPorts)
+	}
+}
+
+func TestBindUSBPorts_Unmarshal_InvalidString(t *testing.T) {
+	var v VM
+	err := json.Unmarshal([]byte(`{"bind_usb_ports": "not-empty"}`), &v)
+	if err == nil {
+		t.Error("expected unmarshal error for non-empty string, got nil")
+	}
+}
+
+// Real-world payload captured during runtime test on Freebox firmware (PR #75
+// validation): ensures the full VM list response decodes without error when
+// bind_usb_ports comes back as an empty string.
+func TestVMList_RealPayload_BindUSBPortsEmptyString(t *testing.T) {
+	payload := `[{"id":0,"name":"test-vm","status":"stopped","memory":256,"vcpus":1,` +
+		`"disk_path":"L0Rpc3F1ZSAxL1ZNcy90ZXN0LnFjb3cy","disk_type":"qcow2",` +
+		`"os":"unknown","enable_screen":false,"cloudinit_enabled":false,` +
+		`"bind_usb_ports":""}]`
+	var vms []VM
+	if err := json.Unmarshal([]byte(payload), &vms); err != nil {
+		t.Fatalf("unmarshal real-world VM list failed: %v", err)
+	}
+	if len(vms) != 1 || vms[0].Name != "test-vm" {
+		t.Errorf("unexpected decode: %+v", vms)
 	}
 }
