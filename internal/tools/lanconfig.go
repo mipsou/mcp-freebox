@@ -24,9 +24,12 @@ type LanConfig struct {
 	Type        string `json:"type"` // router | bridge
 }
 
-// LanHostUpdate is the body for PUT /api/v4/lan/browser/pub/{id}
+// LanHostUpdate is the body for PUT /api/v15/lan/browser/pub/{id}.
+// Tous les champs sont omitempty : le PUT accepte les patchs partiels sur cet
+// endpoint (différent de /vm/{id} qui exige un body complet — cf #80).
 type LanHostUpdate struct {
 	PrimaryName string `json:"primary_name,omitempty"`
+	HostType    string `json:"host_type,omitempty"`
 }
 
 func registerLANConfig(s *server.MCPServer, c writer) {
@@ -47,7 +50,7 @@ func registerLANConfig(s *server.MCPServer, c writer) {
 	// ── Renommer un équipement ────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_lan_host_rename",
-			mcp.WithDescription("Renomme un équipement du réseau local (modifie le nom affiché dans l'interface Freebox et retourné par freebox_lan_hosts)."),
+			mcp.WithDescription("Renomme un équipement du réseau local (modifie le nom affiché dans l'interface Freebox et retourné par freebox_lan_hosts). Pour aussi changer le type, utiliser freebox_lan_host_update."),
 			mcp.WithString("id",
 				mcp.Required(),
 				mcp.Description("ID de l'équipement (champ 'id' dans freebox_lan_hosts)")),
@@ -58,6 +61,44 @@ func registerLANConfig(s *server.MCPServer, c writer) {
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			id := req.GetString("id", "")
 			body := LanHostUpdate{PrimaryName: req.GetString("name", "")}
+			var updated LanHost
+			if err := c.Put(ctx, fmt.Sprintf("/lan/browser/pub/%s", id), body, &updated); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(updated)
+		},
+	)
+
+	// ── Mettre à jour un équipement (nom + type) ─────────────────────────────
+	// Patch partiel autorisé sur cet endpoint : on n'envoie que les champs
+	// fournis. Pratique pour corriger les classifications automatiques erronées
+	// (ex : Home Assistant détecté en "workstation" au lieu de "iot").
+	s.AddTool(
+		mcp.NewTool("freebox_lan_host_update",
+			mcp.WithDescription("Met à jour les attributs modifiables d'un équipement LAN : nom (primary_name) et/ou type (host_type). Au moins un des deux doit être fourni."),
+			mcp.WithString("id",
+				mcp.Required(),
+				mcp.Description("ID de l'équipement (champ 'id' dans freebox_lan_hosts)")),
+			mcp.WithString("primary_name",
+				mcp.Description("Nouveau nom (optionnel)")),
+			mcp.WithString("host_type",
+				mcp.Description("Nouveau type. Set fermé sur firmware 4.9.18.1 — autres valeurs rejetées par l'API ('internal: Erreur de la modification de l'hôte'). Pas de 'iot' ni 'tv' : utiliser 'appliances' (smart-home, électroménager connecté) ou 'networking_device' (passerelles Zigbee/Hue/Trådfri)."),
+				mcp.Enum("workstation", "laptop", "smartphone", "tablet", "printer",
+					"nas", "networking_device", "freebox_player", "freebox_pop",
+					"appliances", "other")),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			id := req.GetString("id", "")
+			if id == "" {
+				return mcp.NewToolResultError("id : paramètre requis"), nil
+			}
+			body := LanHostUpdate{
+				PrimaryName: req.GetString("primary_name", ""),
+				HostType:    req.GetString("host_type", ""),
+			}
+			if body.PrimaryName == "" && body.HostType == "" {
+				return mcp.NewToolResultError("au moins un de primary_name ou host_type doit être fourni"), nil
+			}
 			var updated LanHost
 			if err := c.Put(ctx, fmt.Sprintf("/lan/browser/pub/%s", id), body, &updated); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil

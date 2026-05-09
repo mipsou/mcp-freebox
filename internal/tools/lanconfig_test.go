@@ -71,3 +71,71 @@ func TestLanHostRename_NoError(t *testing.T) {
 		t.Errorf("unexpected error: %v", result.Content)
 	}
 }
+
+// ── lan_host_update : nom + type via une seule API ─────────────────────────
+
+func newLANConfigWriterServer(t *testing.T, mock mockWriter) *server.MCPServer {
+	t.Helper()
+	s := server.NewMCPServer("test", "0.0.0")
+	registerLANConfig(s, mock)
+	return s
+}
+
+func TestLanHostUpdate_BothFields_BodyShape(t *testing.T) {
+	puts := map[string]any{}
+	s := newLANConfigWriterServer(t, mockWriter{
+		mockGetter: mockGetter{},
+		putBodies:  puts,
+	})
+	callToolWithArgs(t, s, "freebox_lan_host_update", map[string]any{
+		"id":           "ether-aa:bb",
+		"primary_name": "HomeAssistant",
+		"host_type":    "iot",
+	})
+	body := puts["/lan/browser/pub/ether-aa:bb"].(LanHostUpdate)
+	if body.PrimaryName != "HomeAssistant" {
+		t.Errorf("primary_name = %q, want HomeAssistant", body.PrimaryName)
+	}
+	if body.HostType != "iot" {
+		t.Errorf("host_type = %q, want iot", body.HostType)
+	}
+}
+
+func TestLanHostUpdate_OnlyType_OmitsName(t *testing.T) {
+	puts := map[string]any{}
+	s := newLANConfigWriterServer(t, mockWriter{
+		mockGetter: mockGetter{},
+		putBodies:  puts,
+	})
+	callToolWithArgs(t, s, "freebox_lan_host_update", map[string]any{
+		"id":        "ether-cc:dd",
+		"host_type": "nas",
+	})
+	body := puts["/lan/browser/pub/ether-cc:dd"].(LanHostUpdate)
+	if body.PrimaryName != "" {
+		t.Errorf("primary_name should be empty when not provided, got %q", body.PrimaryName)
+	}
+	if body.HostType != "nas" {
+		t.Errorf("host_type = %q, want nas", body.HostType)
+	}
+}
+
+func TestLanHostUpdate_RejectsEmpty(t *testing.T) {
+	s := newLANConfigWriterServer(t, mockWriter{mockGetter: mockGetter{}})
+	r := callToolWithArgs(t, s, "freebox_lan_host_update", map[string]any{
+		"id": "ether-xx",
+	})
+	if !r.IsError {
+		t.Error("must reject when neither primary_name nor host_type is provided")
+	}
+}
+
+func TestLanHostUpdate_RejectsMissingID(t *testing.T) {
+	s := newLANConfigWriterServer(t, mockWriter{mockGetter: mockGetter{}})
+	r := callToolWithArgs(t, s, "freebox_lan_host_update", map[string]any{
+		"host_type": "iot",
+	})
+	if !r.IsError {
+		t.Error("must reject when id is missing")
+	}
+}

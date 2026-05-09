@@ -19,3 +19,6 @@
 /vm-cloudinit-runtime.log
 /fs-runtime.log
 /probe-fs.log
+/lan-update-runtime.log
+/probe-lan-types.log
+/probe-types.log

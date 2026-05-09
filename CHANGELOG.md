@@ -9,6 +9,19 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-05-09
+
+### Corrigé — bug bloquant freebox_lan_hosts
+- `LanHost.l2ident` : sur firmware 4.9.18.1, `/lan/browser/pub/` peut renvoyer `l2ident` en objet single `{id, type}` au lieu de tableau, faisant échouer tout `freebox_lan_hosts` avec `cannot unmarshal object into Go struct field LanHost.l2ident`. Nouveau type `L2Idents` avec UnmarshalJSON tolérant (object/array/null), même pattern que `BindUSBPorts` (#76). Bug découvert organiquement en investiguant la classification des devices.
+
+### Ajouté
+- `freebox_lan_host_update(id, primary_name?, host_type?)` : étend `freebox_lan_host_rename` en exposant aussi `host_type`. Permet de corriger les classifications automatiques erronées (Home Assistant détecté en `workstation`, IoT en `other`, etc.). Le `host_type` est contraint via `mcp.Enum` au set fermé validé runtime sur fw 4.9.18.1 : `workstation, laptop, smartphone, tablet, printer, nas, networking_device, freebox_player, freebox_pop, appliances, other`. Pas de type `iot` ni `tv` côté Freebox — utiliser `appliances` pour smart-home/IoT et `networking_device` pour les passerelles Zigbee/Hue/Trådfri.
+
+### Outillage
+- `scripts/probe-lan-host-types.mjs` : liste les hosts avec leur `host_type` pour identifier les classifications douteuses.
+- `scripts/probe-host-type-values.mjs` : sonde quelles valeurs `host_type` l'API accepte/rejette.
+- `scripts/test-lan-host-update-runtime.mjs` : harness validation cycle complet (read → update → verify → restore).
+
 ## [0.39.0] - 2026-05-09
 
 ### Corrigé (#93)
