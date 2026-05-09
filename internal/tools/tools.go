@@ -39,6 +39,8 @@ func RegisterAll(s *server.MCPServer, c writer, d discoverer) {
 	registerDHCP(s, c)
 	registerNAT(s, c)
 	registerWifi(s, c)
+	registerWifiMacFilter(s, c)
+	registerWifiPlanning(s, c)
 	registerStorage(s, c)
 	registerFilesystem(s, c)
 	registerVM(s, c)
