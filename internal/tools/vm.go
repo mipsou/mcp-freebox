@@ -263,22 +263,28 @@ func registerVM(s *server.MCPServer, c writer) {
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			id := req.GetInt("id", 0)
-			patch := map[string]any{}
+			// Read-modify-write : l'API Freebox PUT /vm/{id} rejette les patchs
+			// partiels (#80). On lit l'état courant, on applique les overrides,
+			// on renvoie le body complet — pattern utilisé par fbxvm-ctrl.
+			var body VM
+			if err := c.Get(ctx, fmt.Sprintf("/vm/%d", id), &body); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			args := req.GetArguments()
 			if v, ok := args["name"].(string); ok && v != "" {
-				patch["name"] = v
+				body.Name = v
 			}
 			if v, ok := args["memory"]; ok && v != nil {
-				patch["memory"] = int(toFloat(v))
+				body.Memory = int(toFloat(v))
 			}
 			if v, ok := args["vcpus"]; ok && v != nil {
-				patch["vcpus"] = int(toFloat(v))
+				body.Vcpus = int(toFloat(v))
 			}
 			if v, ok := args["enable_screen"].(bool); ok {
-				patch["enable_screen"] = v
+				body.EnableScreen = v
 			}
 			var updated VM
-			if err := c.Put(ctx, fmt.Sprintf("/vm/%d", id), patch, &updated); err != nil {
+			if err := c.Put(ctx, fmt.Sprintf("/vm/%d", id), body, &updated); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(updated)
