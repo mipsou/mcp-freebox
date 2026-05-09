@@ -9,6 +9,9 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+### Corrigé
+- `freebox_vm_create` : `disk_path` désormais encodé en base64 standard avant envoi à l'API (cohérence avec `cd_path`, `fs/`, `download_dir`). Corrige `invalid_request` persistant sur création VM (#73).
+
 ---
 
 ## [0.19.0] - 2026-04-27
