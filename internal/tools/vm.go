@@ -47,7 +47,7 @@ type VM struct {
 	DiskType          string       `json:"disk_type"`
 	OS                string       `json:"os"`
 	EnableScreen      bool         `json:"enable_screen"`
-	CloudinitEnabled  bool         `json:"cloudinit_enabled"`
+	CloudinitEnabled  bool         `json:"enable_cloudinit"`
 	CloudinitUserdata string       `json:"cloudinit_userdata,omitempty"`
 	CDPath            string       `json:"cd_path,omitempty"`
 	BindUSBPorts      BindUSBPorts `json:"bind_usb_ports,omitempty"`
@@ -64,7 +64,7 @@ type vmCreateRequest struct {
 	DiskType          string       `json:"disk_type"`
 	OS                string       `json:"os"`
 	EnableScreen      bool         `json:"enable_screen"`
-	CloudinitEnabled  bool         `json:"cloudinit_enabled"`
+	CloudinitEnabled  bool         `json:"enable_cloudinit"`
 	CloudinitUserdata string       `json:"cloudinit_userdata,omitempty"`
 	CDPath            string       `json:"cd_path,omitempty"`
 	BindUSBPorts      BindUSBPorts `json:"bind_usb_ports,omitempty"`
@@ -291,7 +291,7 @@ func registerVM(s *server.MCPServer, c writer) {
 	// ── Modifier ─────────────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_vm_update",
-			mcp.WithDescription("Modifie la configuration d'une VM arrêtée (nom, mémoire, vCPUs, écran VNC)."),
+			mcp.WithDescription("Modifie la configuration d'une VM arrêtée (nom, mémoire, vCPUs, écran VNC, cloud-init)."),
 			mcp.WithNumber("id",
 				mcp.Required(),
 				mcp.Description("Identifiant de la VM (voir freebox_vm_list)")),
@@ -303,6 +303,8 @@ func registerVM(s *server.MCPServer, c writer) {
 				mcp.Description("Nouveau nombre de vCPUs (optionnel)")),
 			mcp.WithBoolean("enable_screen",
 				mcp.Description("Activer/désactiver l'écran VNC (optionnel)")),
+			mcp.WithBoolean("enable_cloudinit",
+				mcp.Description("Activer/désactiver cloud-init au boot (optionnel). Nécessite cloudinit_userdata déjà défini sur la VM.")),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			id := req.GetInt("id", 0)
@@ -325,6 +327,9 @@ func registerVM(s *server.MCPServer, c writer) {
 			}
 			if v, ok := args["enable_screen"].(bool); ok {
 				body.EnableScreen = v
+			}
+			if v, ok := args["enable_cloudinit"].(bool); ok {
+				body.CloudinitEnabled = v
 			}
 			var updated VM
 			if err := c.Put(ctx, fmt.Sprintf("/vm/%d", id), body, &updated); err != nil {
