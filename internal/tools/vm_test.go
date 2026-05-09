@@ -706,3 +706,29 @@ func TestVMDiskTask_OK(t *testing.T) {
 		t.Errorf("task content missing state=done: %s", text)
 	}
 }
+
+func TestVMDiskTaskDelete_OK(t *testing.T) {
+	s := newVMServer(t, mockWriter{mockGetter: mockGetter{}})
+	result := callToolWithArgs(t, s, "freebox_vm_disk_task_delete", map[string]any{
+		"task_id": float64(99),
+	})
+	if result.IsError {
+		t.Fatalf("tool returned error: %v", result.Content)
+	}
+	if !strings.Contains(result.Content[0].(mcp.TextContent).Text, "99") {
+		t.Errorf("expected task id in response, got: %s", result.Content[0].(mcp.TextContent).Text)
+	}
+}
+
+func TestVMDiskTaskDelete_APIError(t *testing.T) {
+	s := newVMServer(t, mockWriter{
+		mockGetter: mockGetter{},
+		deleteErrs: map[string]error{"/vm/disk/task/99": fmt.Errorf("task not found")},
+	})
+	result := callToolWithArgs(t, s, "freebox_vm_disk_task_delete", map[string]any{
+		"task_id": float64(99),
+	})
+	if !result.IsError {
+		t.Error("expected tool error result")
+	}
+}
