@@ -9,6 +9,18 @@ Versionnage : [Semantic Versioning](https://semver.org/lang/fr/)
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-05-09
+
+### Corrigé (#93)
+- `freebox_fs_list` : la réponse `GET /api/v15/fs/ls/{path}` est `{entries:[...], parent:{...}}`, pas un tableau brut. Avant ce fix, l'outil échouait sur tout chemin avec `cannot unmarshal object into Go value of type []tools.FSEntry`. Nouveau struct `FSListResult` enveloppe correctement la réponse, le contrat MCP côté caller est inchangé.
+
+### Ajouté (#94)
+- `freebox_fs_rename(src_path, new_name)` : renomme un fichier/dossier in-place via `POST /api/v15/fs/rename/`. Diffère de `fs_mv` (qui exige un répertoire destination et est async). Sécurité : `new_name` rejette `/`, `\`, `..` et le vide ; `src_path` passe par `sanitizeFSPath`. Retourne le nouveau chemin complet en plain text (l'API le renvoie en base64, décodé côté tool).
+
+### Outillage
+- `scripts/test-fs-list-rename-runtime.mjs` : harness validant fs_list + cycle disk_create → fs_rename → fs_list (verify) → cleanup.
+- `scripts/probe-fs-list-and-rename.mjs` : probe runtime pour reproduire #93 et lister les outils fs_*.
+
 ## [0.38.0] - 2026-05-09
 
 ### Corrigé — cloud-init silencieusement désactivé (#89)
