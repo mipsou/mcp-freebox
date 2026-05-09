@@ -8,6 +8,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -38,7 +39,7 @@ type SambaShare struct {
 	ReadOnly bool   `json:"readonly"`
 }
 
-func registerNetshare(s *server.MCPServer, c getter) {
+func registerNetshare(s *server.MCPServer, c writer) {
 	// ── Samba — config globale ────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_samba_config",
@@ -50,6 +51,50 @@ func registerNetshare(s *server.MCPServer, c getter) {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 			return jsonResult(cfg)
+		},
+	)
+
+	// ── Samba — modifier config ───────────────────────────────────────────────
+	s.AddTool(
+		mcp.NewTool("freebox_samba_config_set",
+			mcp.WithDescription("Modifie la configuration du serveur Samba (partage de fichiers, imprimante, authentification, workgroup). Patch partiel : seuls les champs fournis sont mis à jour. Nécessite la permission 'settings'."),
+			mcp.WithBoolean("file_share_enabled",
+				mcp.Description("Activer ou désactiver le partage de fichiers SMB")),
+			mcp.WithBoolean("print_share_enabled",
+				mcp.Description("Activer ou désactiver le partage d'imprimante SMB")),
+			mcp.WithBoolean("logon_enabled",
+				mcp.Description("Requérir une authentification pour accéder aux partages")),
+			mcp.WithString("logon_user",
+				mcp.Description("Identifiant Samba utilisé pour l'authentification")),
+			mcp.WithString("workgroup",
+				mcp.Description("Nom du workgroup SMB (ex: WORKGROUP)")),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			args := req.GetArguments()
+			patch := map[string]any{}
+			if v, ok := args["file_share_enabled"].(bool); ok {
+				patch["file_share_enabled"] = v
+			}
+			if v, ok := args["print_share_enabled"].(bool); ok {
+				patch["print_share_enabled"] = v
+			}
+			if v, ok := args["logon_enabled"].(bool); ok {
+				patch["logon_enabled"] = v
+			}
+			if v, ok := args["logon_user"].(string); ok {
+				patch["logon_user"] = v
+			}
+			if v, ok := args["workgroup"].(string); ok && v != "" {
+				patch["workgroup"] = v
+			}
+			if len(patch) == 0 {
+				return mcp.NewToolResultError("aucun champ à modifier (fournir au moins un paramètre)"), nil
+			}
+			var updated SambaConfig
+			if err := c.Put(ctx, "/netshare/samba/", patch, &updated); err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("freebox_samba_config_set : %v", err)), nil
+			}
+			return jsonResult(updated)
 		},
 	)
 
