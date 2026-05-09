@@ -245,13 +245,13 @@ func TestVMCreate_DiskDir_Default(t *testing.T) {
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
 	}
-	vm, ok := bodies["/vm/"].(VM)
+	creq, ok := bodies["/vm/"].(vmCreateRequest)
 	if !ok {
-		t.Fatalf("expected VM body, got %T", bodies["/vm/"])
+		t.Fatalf("expected vmCreateRequest body, got %T", bodies["/vm/"])
 	}
 	want := "/Disque 1/VMs/haos.qcow2"
-	if vm.DiskPath != want {
-		t.Errorf("DiskPath = %q, want %q", vm.DiskPath, want)
+	if creq.DiskPath != want {
+		t.Errorf("DiskPath = %q, want %q", creq.DiskPath, want)
 	}
 }
 
@@ -270,13 +270,13 @@ func TestVMCreate_CustomDiskDir(t *testing.T) {
 	if result.IsError {
 		t.Fatalf("tool returned error: %v", result.Content)
 	}
-	vm, ok := bodies["/vm/"].(VM)
+	creq, ok := bodies["/vm/"].(vmCreateRequest)
 	if !ok {
-		t.Fatalf("expected VM body, got %T", bodies["/vm/"])
+		t.Fatalf("expected vmCreateRequest body, got %T", bodies["/vm/"])
 	}
 	want := "/Freebox/VMs/haos.qcow2"
-	if vm.DiskPath != want {
-		t.Errorf("DiskPath = %q, want %q", vm.DiskPath, want)
+	if creq.DiskPath != want {
+		t.Errorf("DiskPath = %q, want %q", creq.DiskPath, want)
 	}
 }
 
