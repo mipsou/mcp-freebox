@@ -10,12 +10,29 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/url"
 	"path"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
+
+// FSInfo reflects GET /api/v15/fs/info/?path={base64}.
+// Note : ce endpoint ATTEND le path en query-string (URL-encodé), pas en
+// segment d'URL comme /fs/ls/.
+type FSInfo struct {
+	Name         string `json:"name"`
+	Path         string `json:"path"`
+	Type         string `json:"type"` // dir | file | link
+	Size         int64  `json:"size"`
+	Index        int    `json:"index"`
+	Link         bool   `json:"link"`
+	Parent       string `json:"parent"`
+	Modification int64  `json:"modification"`
+	Hidden       bool   `json:"hidden"`
+	MimeType     string `json:"mimetype"`
+}
 
 // FSEntry reflects one entry from GET /api/v6/fs/ls/{path}
 // type : dir | file | link
@@ -78,6 +95,31 @@ func sanitizeFSPath(p string) (string, error) {
 }
 
 func registerFilesystem(s *server.MCPServer, c writer) {
+	// ── Info sur un fichier/répertoire ───────────────────────────────────────
+	s.AddTool(
+		mcp.NewTool("freebox_fs_info",
+			mcp.WithDescription("Renvoie les métadonnées d'un fichier ou répertoire sur le stockage Freebox : type (file/dir/link), taille, mimetype, dernière modification, parent."),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Chemin absolu sur le stockage Freebox, ex: /Disque dur/Téléchargements/photo.jpg"),
+			),
+		),
+		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			raw := req.GetString("path", "")
+			p, err := sanitizeFSPath(raw)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			// /fs/info/ exige path en query-string URL-encode (pas en segment).
+			query := "?path=" + url.QueryEscape(encodeFSPath(p))
+			var info FSInfo
+			if err := c.Get(ctx, "/fs/info/"+query, &info); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(info)
+		},
+	)
+
 	// ── Lister ───────────────────────────────────────────────────────────────
 	s.AddTool(
 		mcp.NewTool("freebox_fs_list",
