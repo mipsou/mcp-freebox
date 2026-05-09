@@ -4,3 +4,11 @@
 *.test
 *.out
 /dist/
+
+# API discovery tooling artefacts (sensible: contiennent IPs, MACs, hostnames du LAN)
+/node_modules/
+/probe-output.json
+/probe-run.log
+/samples-tier1.json
+/sniff-output.json
+/.claude/
