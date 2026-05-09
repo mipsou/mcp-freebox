@@ -7,7 +7,10 @@
 package tools
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -17,6 +20,36 @@ import (
 type L2Ident struct {
 	ID   string `json:"id"`
 	Type string `json:"type"`
+}
+
+// L2Idents tolère le quirk firmware 4.9.18.1 où /lan/browser/pub/ peut renvoyer
+// `l2ident` soit comme un tableau `[{id,type}]` soit comme un objet single
+// `{id,type}` (un host n'a typiquement qu'un seul identifiant L2 → l'API
+// déballe parfois). Custom unmarshaler à l'image de BindUSBPorts (#76).
+type L2Idents []L2Ident
+
+func (l *L2Idents) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		*l = nil
+		return nil
+	}
+	// Object single
+	if trimmed[0] == '{' {
+		var single L2Ident
+		if err := json.Unmarshal(trimmed, &single); err != nil {
+			return fmt.Errorf("l2ident object: %w", err)
+		}
+		*l = L2Idents{single}
+		return nil
+	}
+	// Array
+	var arr []L2Ident
+	if err := json.Unmarshal(trimmed, &arr); err != nil {
+		return fmt.Errorf("l2ident array: %w", err)
+	}
+	*l = arr
+	return nil
 }
 
 // L3Connectivity reflects one IP address assigned to a LAN host.
@@ -34,7 +67,7 @@ type LanHost struct {
 	PrimaryName       string           `json:"primary_name"`
 	HostType          string           `json:"host_type"`
 	PrimaryNameManual bool             `json:"primary_name_manual"`
-	L2Ident           []L2Ident        `json:"l2ident"`
+	L2Ident           L2Idents         `json:"l2ident"`
 	VendorName        string           `json:"vendor_name"`
 	Persistent        bool             `json:"persistent"`
 	Reachable         bool             `json:"reachable"`

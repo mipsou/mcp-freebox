@@ -7,6 +7,7 @@
 package tools
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -75,5 +76,52 @@ func TestLanInterfaces_APIError(t *testing.T) {
 	result := callTool(t, s, "freebox_lan_interfaces")
 	if !result.IsError {
 		t.Error("expected tool error result")
+	}
+}
+
+// L2Idents tolère que l'API renvoie l2ident en object single ou array.
+// Sur firmware 4.9.18.1, observé en object pour certains hosts.
+
+func TestL2Idents_UnmarshalArray(t *testing.T) {
+	var l L2Idents
+	if err := json.Unmarshal([]byte(`[{"id":"aa:bb","type":"mac"}]`), &l); err != nil {
+		t.Fatalf("unmarshal array: %v", err)
+	}
+	if len(l) != 1 || l[0].ID != "aa:bb" {
+		t.Errorf("got %+v", l)
+	}
+}
+
+func TestL2Idents_UnmarshalSingleObject(t *testing.T) {
+	var l L2Idents
+	if err := json.Unmarshal([]byte(`{"id":"aa:bb","type":"mac"}`), &l); err != nil {
+		t.Fatalf("unmarshal single object: %v", err)
+	}
+	if len(l) != 1 || l[0].ID != "aa:bb" || l[0].Type != "mac" {
+		t.Errorf("single object → got %+v, want one entry wrapped", l)
+	}
+}
+
+func TestL2Idents_UnmarshalNull(t *testing.T) {
+	var l L2Idents
+	if err := json.Unmarshal([]byte(`null`), &l); err != nil {
+		t.Fatalf("unmarshal null: %v", err)
+	}
+	if l != nil {
+		t.Errorf("null should yield nil slice, got %+v", l)
+	}
+}
+
+func TestLanHost_DecodesL2IdentObjectShape(t *testing.T) {
+	// Réplique la shape réelle observée en runtime sur firmware 4.9.18.1.
+	payload := `{"id":"ether-aa:bb","primary_name":"x","host_type":"workstation",
+		"l2ident":{"id":"AA:BB:CC:DD:EE:FF","type":"mac_address"},
+		"l3connectivities":[]}`
+	var h LanHost
+	if err := json.Unmarshal([]byte(payload), &h); err != nil {
+		t.Fatalf("LanHost decode failed on real-world l2ident shape: %v", err)
+	}
+	if len(h.L2Ident) != 1 || h.L2Ident[0].ID != "AA:BB:CC:DD:EE:FF" {
+		t.Errorf("L2Ident wrap failed: %+v", h.L2Ident)
 	}
 }
