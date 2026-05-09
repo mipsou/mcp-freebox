@@ -37,7 +37,10 @@ func TestLoadDefaults(t *testing.T) {
 
 func TestBaseURL_Default(t *testing.T) {
 	t.Setenv("FREEBOX_API_BASE", "")
-	cfg, _ := Load()
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
 	got := cfg.BaseURL()
 	want := "https://" + DefaultHost + DefaultAPIBase
 	if got != want {
@@ -47,7 +50,10 @@ func TestBaseURL_Default(t *testing.T) {
 
 func TestBaseURL_EnvOverride(t *testing.T) {
 	t.Setenv("FREEBOX_API_BASE", "/api/v9")
-	cfg, _ := Load()
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
 	got := cfg.BaseURL()
 	want := "https://" + DefaultHost + "/api/v9"
 	if got != want {
@@ -57,7 +63,10 @@ func TestBaseURL_EnvOverride(t *testing.T) {
 
 func TestLoadTimeout_EnvOverride(t *testing.T) {
 	t.Setenv("FREEBOX_TIMEOUT", "45s")
-	cfg, _ := Load()
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
 	if cfg.Timeout != 45*time.Second {
 		t.Errorf("Timeout = %v, want 45s", cfg.Timeout)
 	}
@@ -65,19 +74,19 @@ func TestLoadTimeout_EnvOverride(t *testing.T) {
 
 func TestLoadTimeout_InvalidFallsBack(t *testing.T) {
 	t.Setenv("FREEBOX_TIMEOUT", "not-a-duration")
-	cfg, _ := Load()
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
 	if cfg.Timeout != DefaultTimeout {
 		t.Errorf("Timeout = %v, want default %v", cfg.Timeout, DefaultTimeout)
 	}
 }
 
-func TestLoadHostEmpty_ReturnsError(t *testing.T) {
-	// FREEBOX_HOST="" would normally be caught — but env("key","fallback") uses
-	// fallback when env is empty, so host is only empty if fallback is also empty.
-	// The guard is there for programmatic misuse; test it directly.
-	cfg := &Config{Host: "", APIBase: DefaultAPIBase}
-	if cfg.Host != "" {
-		t.Skip("host not empty")
+func TestLoadAPIBase_MissingSlash_ReturnsError(t *testing.T) {
+	t.Setenv("FREEBOX_API_BASE", "api/v15") // manque le '/' initial
+	_, err := Load()
+	if err == nil {
+		t.Error("Load() should return error when FREEBOX_API_BASE has no leading slash")
 	}
-	// Validate manually: Load() itself can't produce Host="" via env.
 }
